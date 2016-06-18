@@ -1,5 +1,3 @@
-;              T         T               T
-
 ; Compact demo-startup by Blueberry/Loonies
 ; Version 1.5, October 7, 2014
 ; Public Domain

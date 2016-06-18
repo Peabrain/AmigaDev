@@ -1,5 +1,3 @@
-;              T         T               T
-
 COMPATIBILITY	=	1
 FASTMEM	=	0
 RMBPAUSE	=	0
