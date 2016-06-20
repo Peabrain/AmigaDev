@@ -1,3 +1,4 @@
+	incdir	data:AmigaDev/sources/
 	include "custom.i"
 	include "Wolfenstein3D/defines.i"
 *********************************************************************
@@ -7,12 +8,29 @@ Init:
 ;	divs.w	#128,d0
 ;	rts
 
-;	bra	noControl
-;	bsr	InitBitZoom
-;	bsr	RenderLoop
-;	bsr	RenderLoop
-;	rts
-
+	bra	wq1
+	lea	Sinus,a1
+	move.w	SinPos,d0
+	move.w	(a1,d0),d0
+	eor.w	d0,d0
+	add.w	#0,d0
+	lea	VectorsOrg,a1
+	lea	Vectors,a0
+	move.w	XPos,d2
+	move.w	#6-1,d7
+loopd2_:	move.w	2(a1),d1
+	add.w	d0,d1
+	move.w	d1,2(a0)
+	move.w	(a1),d1
+	add.w	d2,d1
+	move.w	d1,(a0)
+	add	#4,a0
+	add	#4,a1
+	dbf	d7,loopd2_
+wq:	bsr	InitBitZoom
+	bsr	RenderLoop
+	rts
+wq1:
 	move.l	4.w,a6		; execbase
 	clr.l	d0
 	move.l	#gfxname,a1
@@ -216,12 +234,12 @@ cler:	move.l	d0,(a0)+
 gfg:	move.l	d0,(a0)+
 	dbf	d7,gfg
 
-	move.l	Screens+4,a0
-	add.l	#ScreenWidth/8*ScreenHeight*3,a0
-	move.l	#$00000000,d0
-	move.w	#ScreenWidth/32*160/2-1,d7
-gfg1:	move.l	d0,(a0)+
-	dbf	d7,gfg1
+;	move.l	Screens+4,a0
+;	add.l	#ScreenWidth/8*ScreenHeight*3,a0
+;	move.l	#$ff00ff00,d0
+;	move.w	#ScreenWidth/32*160/2-1,d7
+;gfg1:	move.l	d0,(a0)+
+;	dbf	d7,gfg1
 
 	bra	noControl
 	lea	VectorsOrg,a1
@@ -230,30 +248,53 @@ gfg1:	move.l	d0,(a0)+
 	move.w	XPos,d2
 	move.w	#6-1,d7
 loopd1:	move.w	2(a1),d1
-;	add.w	d0,d1
+	add.w	d0,d1
 	move.w	d1,2(a0)
 	move.w	(a1),d1
-;	add.w	d2,d1
+	add.w	d2,d1
 	move.w	d1,(a0)
 	add	#4,a0
 	add	#4,a1
 	dbf	d7,loopd1
 
 noControl:
+;	bra.b	nof
 
 	lea	Sinus,a1
-	lea	Vectors,a0
-	lea	VectorsOrg,a2
 	move.w	SinPos,d0
 	move.w	(a1,d0),d0
 	add.w	#128+8,d0
+	lea	VectorsOrg,a1
+	lea	Vectors,a0
+	move.w	XPos,d2
+	move.w	ZPos,d3
 	move.w	#6-1,d7
-weq:	move.l	(a2)+,d1
+loopd2:	move.w	2(a1),d1
 	add.w	d0,d1
-	move.l	d1,(a0)+
-	dbf	d7,weq
+	add.w	d3,d1
+	move.w	d1,2(a0)
+	move.w	(a1),d1
+	add.w	d2,d1
+	move.w	d1,(a0)
+	add	#4,a0
+	add	#4,a1
+	dbf	d7,loopd2
 
+nof:
 	bsr	RenderLoop
+
+	bra	ty
+	move.l	Screens+4,a1
+	add.l	#ScreenWidth/8*ScreenHeight*2,a1
+	move.l	a1,a0
+	add.l	#ScreenWidth/8*ScreenHeight,a0
+	move.l	#$ffffffff,d0
+	move.l	#$ff00ff00,d1
+	move.w	#ScreenWidth/32*8-1,d7
+klo:	move.l	d0,(a1)+
+	move.l	d1,(a0)+
+	dbf	d7,klo
+ty:
 
 	sub.w	#4,movingX
 	move.w	Frames,d0
@@ -451,10 +492,6 @@ IntLevel3_end:
 	movem.l	(sp)+,d0-a6
 	rte
 ;--------------------------------------------------------------------	
-BEnd:	dc.w	0
-XPos:	dc.w	0
-ZPos:	dc.w	128
-;--------------------------------------------------------------------	
 BlitWait:
 	cmp.w	#0,BEnd
 	bne.b	BlitWait
@@ -566,6 +603,8 @@ RL_CheckFrustumRight:
 	movem.l	d2/d3/d4,-(sp)	
 	lsl.w	#2,d4
 	move.l	(a5,d4),d2
+;	cmp.w	#16,d2
+;	blt.b	RL_noOnScrR
 	move.l	d2,d3
 	swap	d3
 	ext.l	d2
@@ -573,7 +612,7 @@ RL_CheckFrustumRight:
 	muls.w	#Deep,d3
 	muls.w	#ScreenWidth/2,d2
 	sub.l	d2,d3
-	bpl	RL_noOnScrR
+	bgt	RL_noOnScrR
 	lsr.w	#2,d4
 	move.w	d4,d3
 	and.w	#7,d3
@@ -584,13 +623,27 @@ RL_noOnScrR:
 	movem.l	(sp)+,d2/d3/d4
 	rts
 ;--------------------------------------------------------------------	
+CalcDeterminante:
+	; ret d3 - det
+	move.l	d2,CDd2+2
+	move.w	MatrixW,d3
+	muls.w	MatrixW+2*2+2,d3
+	move.w	MatrixW+2,d2
+	muls.w	MatrixW+2*2,d2
+	sub.l	d2,d3
+CDd2:	move.l	#0,d2
+	rts
+;--------------------------------------------------------------------	
 RenderLoop:
 ;	bra	mm
 ; --------------------
 	lea	ScreenPreRender,a0
+	lea	ScreenPreRenderZ,a1
 	move.w	#$ffff,d0
+	move.l	#$0,d1
 	move.w	#ScreenWidth-1,d7
 RL0:	move.w	d0,(a0)+
+	move.l	d1,(a1)+
 	dbf	d7,RL0
 ; --------------------
 	lea	InFrustumLeft,a0
@@ -608,42 +661,224 @@ RL_l3:	move.l	d0,(a0)+
 	lea	InFrustumLeft,a2
 	lea	InFrustumRight,a3
 	lea	InFrustumToTest,a4
-	move.w	#$0,d6
+	move.w	#0,d6
 	move.w	#5-1,d7
 ;	move.w	#1-1,d7
 RL3:	move.w	d6,d5
-	lsl.w	#4,d5
-	move.w	(a6,d5.w),d0	; x1-vector
-	move.w	2(a6,d5.w),d1	; x2-vector
+	muls.w	#20,d5
+;	lsl.w	#4,d5
+	move.w	(a6,d5),d0	; x1-vector
+	move.w	2(a6,d5),d1	; x2-vector
+; ------------------------- check if positions are in frustrum
+	move.w	d0,d2
+	lsl.w	#2,d2
+	move.w	d1,d3
+	lsl.w	#2,d3
+	move.l	(a5,d2.w),d2
+	move.l	(a5,d3.w),d3
+	eor.l	d4,d4
+	sub.w	d2,d4
+	sub.w	d2,d3
+	swap	d4
+	swap	d2
+	swap	d3
+	sub.w	d2,d4
+	sub.w	d2,d3
+	move.w	d2,d3
+	ext.l	d3
+	muls.w	d4,d3	
+	swap	d4
+	swap	d2
+	ext.l	d2
+	muls.w	d4,d2
+	add.l	d2,d3
+	bpl.w	RL_n3
 ; ------------------------- check if positions are in frustrum
 	bsr	RL_CheckInside
 
 	move.w	d0,d3
 	move.w	d3,d4
 	and.w	#7,d3
-	lsr.l	#3,d4
+	lsr.w	#3,d4
 	btst	d3,(a3,d4.w)
 	beq.w	RL_n3
 
 	move.w	d1,d3
 	move.w	d3,d4
 	and.w	#7,d3
-	lsr.l	#3,d4
+	lsr.w	#3,d4
 	btst	d3,(a2,d4.w)
-	beq.b	RL_n3
+	beq.w	RL_n3
 
-; -------------------------
+	move.w	d0,d4
 	lsl.w	#2,d0
-	lsl.w	#2,d1
 	move.l	(a5,d0),d0	; x1-vector
+	swap	d4
+	move.w	d1,d4
+	swap	d4
+	lsl.w	#2,d1
 	move.l	(a5,d1),d1	; x2-vector
+	cmp.w	#8,d0
+	bge.w	RL_x_inFront
+
+	cmp.w	#8,d1
+	bge.w	RL_x_inFront
+	bra.w	RL_n3
+RL_x_inFront:
+;	x1 = x1			,z1 = z1
+;	x2 = x2			,z2 = z2
+;	x3 = 0			,z3 = 0
+;	x4 = -ScreenWidth/2	,z4 = Deep
+;	s(x2-x1)-t(x4-x3)=x3-x1
+;	s(z2-z1)-t(z4-z3)=z3-z1
+			
+	move.w	#0,Det+8
+	move.l	d0,RL_newD0+2
+	move.w	d4,d3
+	move.w	d3,d4
+	and.w	#7,d3
+	lsr.w	#3,d4
+	btst	d3,(a2,d4.w)
+	bne.w	RL_d0noOutside
+
+	move.w	#-(-ScreenWidth/2-0),MatrixW+2
+	move.w	#-(Deep-0),MatrixW+2*2+2
+	move.w	d1,d3
+	sub.w	d0,d3
+	move.w	d3,MatrixW+2*2
+	swap	d0
+	swap	d1
+	move.w	d1,d3
+	sub.w	d0,d3
+	move.w	d3,MatrixW
+	swap	d0
+	swap	d1
+	bsr.w	CalcDeterminante
+	asr.l	#8,d3
+	move.l	d3,Det
+
+	move.w	#0,d3
+	sub.w	d0,d3
+	move.w	d3,MatrixW+2*2
+	swap	d1
+	swap	d0
+	move.w	#0,d3
+	sub.w	d0,d3
+	move.w	d3,MatrixW
+	bsr.w	CalcDeterminante
+;	asl.l	#8,d3
+	move.l	Det,d2
+	divs	d2,d3
+	move.w	d3,Det+8
+
+	move.l	d1,d3
+	sub.w	d0,d3
+	muls.w	Det+8,d3
+	asr.l	#8,d3
+	add.w	d0,d3
+	move.w	d3,d2
+	swap	d0
+	swap	d1
+	move.l	d1,d3
+	sub.w	d0,d3
+	muls.w	Det+8,d3
+	asr.l	#6,d3
+	add.w	d0,d3
+	add.w	d0,d3
+	add.w	d0,d3
+	add.w	d0,d3
+	add.w	#$2,d3
+	asr.w	#2,d3
+	swap	d2
+	move.w	d3,d2
+	move.l	d2,RL_newD0+2
+RL_d0noOutside:
+	move.w	#$100,Det+10
+	move.l	d1,RL_newD1+2
+	swap	d4
+	move.w	d4,d3
+	move.w	d3,d4
+	and.w	#7,d3
+	lsr.w	#3,d4
+	btst	d3,(a3,d4.w)
+	bne.w	RL_d1noOutside
+
+	move.w	#-(ScreenWidth/2-0),MatrixW+2
+	move.w	#-(Deep-0),MatrixW+2*2+2
+	move.w	d1,d3
+	sub.w	d0,d3
+	move.w	d3,MatrixW+2*2
+	swap	d0
+	swap	d1
+	move.w	d1,d3
+	sub.w	d0,d3
+	move.w	d3,MatrixW
+	swap	d0
+	swap	d1
+	bsr.w	CalcDeterminante
+	asr.l	#8,d3
+	move.l	d3,Det
+
+;	move.w	#-(ScreenWidth/2+1),MatrixW+2
+;	neg.w	MatrixW+2
+	move.w	#0,d3
+	sub.w	d0,d3
+	move.w	d3,MatrixW+2*2
+	swap	d1
+	swap	d0
+	move.w	#0,d3
+	sub.w	d0,d3
+	move.w	d3,MatrixW
+	bsr.w	CalcDeterminante
+;	asl.l	#2,d3
+	move.l	Det,d2
+	divs	d2,d3
+	move.w	d3,Det+10
+
+	move.l	d1,d3
+	sub.w	d0,d3
+	muls.w	Det+10,d3
+	asr.l	#6,d3
+	add.w	d0,d3
+	add.w	d0,d3
+	add.w	d0,d3
+	add.w	d0,d3
+	add.w	#$2,d3
+	asr.w	#2,d3
+	move.w	d3,d2
+	swap	d0
+	swap	d1
+	move.l	d1,d3
+	sub.w	d0,d3
+	muls.w	Det+10,d3
+	asr.l	#6,d3
+	add.w	d0,d3
+	add.w	d0,d3
+	add.w	d0,d3
+	add.w	d0,d3
+	add.w	#$2,d3
+	asr.w	#2,d3
+	swap	d2
+	move.w	d3,d2
+	move.l	d2,RL_newD1+2
+;	move.w	Det+10,d2
+;	asr.w	#2,d2
+;	move.w	d2,Det+10
+RL_d1noOutside:
+RL_newD0:
+	move.l	#0,d0
+RL_newD1:
+	move.l	#0,d1
+; -------------------------
 	move.w	d0,d2
+	move.w	d2,Tmp
 	swap	d0
 	ext.l	d0
 	asl.l	#DeepShift,d0
 	divs.w	d2,d0
 
 	move.w	d1,d2
+	move.w	d2,Tmp+2
 	swap	d1
 	ext.l	d1
 	asl.l	#DeepShift,d1
@@ -653,35 +888,98 @@ RL3:	move.w	d6,d5
 	sub.w	d0,d2
 	move.w	d2,6(a6,d5)
 
-	cmp.w	#-ScreenWidth/2,d1
-	ble.b	RL_n3
-
-	cmp.w	#ScreenWidth/2,d1
-	ble.b	RL_n2
-	move.w	#ScreenWidth/2,d1
-RL_n2:
-	cmp.w	#ScreenWidth/2,d0
-	bge.b	RL_n3
-
-
-	move.w	#0,4(a6,d5)
-	cmp.w	#-ScreenWidth/2,d0
-	bge.b	RL_n0
-	add.w	#ScreenWidth/2,d0
-	neg.w	d0
-	move.w	d0,4(a6,d5)
-	move.w	#-ScreenWidth/2,d0
-RL_n0:
 	sub.w	d0,d1
 	subq.w	#1,d1
-	bmi.b	RL_n3
+	bmi.w	RL_n3
+
+;------
+	movem.l	d0/d1/d3/d2/d6,-(sp)
+
+	move.l	#64,d0
+	muls.w	Det+8,d0
+	asl.l	#8,d0
+	divs.w	Tmp,d0
 	ext.l	d0
-	asl.l	#1,d0
-	lea	ScreenPreRender+2*ScreenWidth/2,a0
-RL_1:	cmp.w	#$ffff,(a0,d0)
-	bne.b	RL_5
-	move.w	d6,(a0,d0)
-RL_5:	add.l	#2,d0
+
+	move.l	#64,d3
+	muls.w	Det+10,d3
+	asl.l	#8,d3
+	divs.w	Tmp+2,d3
+	ext.l	d3
+
+	sub.l	d0,d3
+	move.w	d1,d4
+	add.w	#1,d4
+	asl.l	#4,d3
+	divs.w	d4,d3
+	ext.l	d3
+	asl.l	#4,d3
+	move.l	d3,12(a6,d5)	; RLaddT
+
+	move.l	#$1<<20,d0
+	divs.w	Tmp,d0
+	ext.l	d0
+	move.l	#$1<<20,d3
+	divs.w	Tmp+2,d3
+	ext.l	d3
+	sub.l	d0,d3
+	asl.l	#8,d3
+	divs.w	d4,d3
+	ext.l	d3
+	move.l	d3,8(a6,d5)	; RLaddZ
+	asl.l	#8,d0
+	move.l	d0,RL_gZ+2
+
+	move.l	#64,d2
+	asl.l	#DeepShift,d2
+	asl.l	#4,d2
+	divs.w	Tmp,d2
+	ext.l	d2
+;	asl.l	#8,d2
+
+	move.l	#64,d3
+	asl.l	#DeepShift,d3
+	asl.l	#4,d3
+	divs.w	Tmp+2,d3
+	ext.l	d3
+;	asl.l	#8,d3
+
+	sub.l	d2,d3
+	asl.l	#4,d3
+	divs.w	d4,d3
+	ext.l	d3
+	move.l	d3,16(a6,d5)	; RLaddY
+
+	
+	movem.l	(sp)+,d0/d1/d3/d2/d6
+ww:
+;------
+RL_gZ:	move.l	#0,d2
+	move.l	8(a6,d5.w),d3
+	add.w	#ScreenWidth/2,d0
+	bpl.w	RL_9
+	add.w	d0,d1
+	bmi.b	RL_n3
+	muls.w	d3,d0
+	sub.l	d0,d2
+	eor.w	d0,d0
+RL_9:
+	ext.l	d0
+	add.w	d0,d0
+	lea	ScreenPreRender,a0
+	lea	ScreenPreRenderZ,a1
+	add.w	d0,a0
+	add.w	d0,a1
+	add.w	d0,a1
+RL_1:	cmp.l	(a1),d2
+	ble.b	RL_5
+;	cmp.w	#$ffff,(a0)
+;	bne.w	RL_5
+	move.w	d6,(a0)
+	move.l	d2,(a1)
+RL_5:	addq	#2,a0
+	addq	#4,a1
+	add.l	d3,d2
 	dbf	d1,RL_1
 RL_n3:
 	add.w	#1,d6
@@ -700,51 +998,6 @@ RL_n3:
 ;RL_3:	addq	#4,a0
 ;	dbf	d7,RL_2
 
-	bra	dd
-	
-; --------------------
-; ScreenPreRender 00000000TTTTTTTT0CCZZZZZZZPPPPPP
-; --------------------
-mm:	lea	ScreenPreRender,a0
-	lea	Sinus,a4
-	move.w	SinPos,d4
-	swap	d4
-	move.w	SinPos+2,d4
-	swap	d4
-	move.w	movingX,d1
-	move.w	#ScreenWidth-1,d7
-RL1:	move.w	d1,d5
-	lsr.w	#1,d5
-	and.w	#63,d5
-	move.w	(a4,d4.w),d2
-	lsr.w	#4,d2
-;	move.w	#0,YOffset
-	sub.w	#19*(DoubleX+1)*2,d4
-	and.w	#(SinusSize-1)*2,d4
-	swap	d4
-	move.w	(a4,d4.w),d0
-	lsr.w	#2,d0
-	add.w	d2,d0
-	add.w	#32,d0
-	add.w	#2*(DoubleX+1)*2,d4
-	and.w	#(SinusSize-1)*2,d4
-	swap	d4
-	lsl.w	#6,d0
-	or.w	d0,d5
-; -------------------- testcolor
-	move.w	d1,d0
-	lsr.w	#7,d0
-	and.w	#$3,d0
-	ror.w	#16-6-7,d0
-	or.w	d0,d5
-; --------------------
-	and.l	#$0000ffff,d5
-	move.l	d5,(a0)+
-	addq.l	#1*(DoubleX+1),d1
-	dbf	d7,RL1
-
-;----------------------------------------
-dd:
 	move.l	#$80000000,RLbit+2
 	lea	Walls,a6
 	lea	Vectors,a5
@@ -754,6 +1007,7 @@ dd:
 	move.w	movingX,d1
 	move.l	Screens+4,a1
 	add.l	#ScreenWidth/8*ScreenHeight*4,a1
+	move.w	#-ScreenWidth/2,Tmp
 	move.l	Screens+4,a3
 	move.l	#0,d6			; last t/z
 	move.l	#0,d3			; last 1/z
@@ -773,13 +1027,14 @@ _lh:	move.w	(a4)+,d1
 	beq.w	RLnonewwall
 	move.w	d1,d0
 
-	move.w	d0,d5
-	lsl.w	#4,d5
+	move.w	d1,d5
+	muls.w	#20,d5
+;	lsl.w	#4,d5
 
 	move.w	#$4e71,RLbit+6		; nop ; 4e71
 	move.w	#$4e71,RLbit+6+2
 	move.w	#$4e71,RLbit+6+4
-	move.w	8(a6,d5),d1	; color
+	move.w	4(a6,d5),d1		; color
 	btst	#0,d1
 	bne	eewl
 	move.w	#$8791,RLbit+6		; or.l	d3,(a1)	; 8791
@@ -792,65 +1047,163 @@ eewh:
 	move.w	2(a6,d5),d2		; x2-vector
 	lsl.w	#2,d1
 	lsl.w	#2,d2
-	move.w	2(a5,d1),d3
-	swap	d3
-	move.w	2(a5,d2),d3
-	move.w	6(a6,d5),d2
-	swap	d3
+;------
+	movem.l	d0-d3,-(sp)
+	move.l	(a5,d1),d0
+	move.l	(a5,d2),d1
+	move.w	Tmp,d6
+	neg.w	d6
+	move.w	d6,MatrixW+2
+	move.w	#-(Deep-0),MatrixW+2*2+2
+	move.w	d1,d3
+	sub.w	d0,d3
+	move.w	d3,MatrixW+2*2
+	swap	d0
+	swap	d1
+	move.w	d1,d3
+	sub.w	d0,d3
+	move.w	d3,MatrixW
+;	swap	d0
+	swap	d1
+	bsr.w	CalcDeterminante
+	asr.l	#8,d3
+	move.l	d3,Det
 
-	move.l	#64,d4
-	asl.l	#DeepShift,d4
-	divs.w	d3,d4
-	swap	d3		; z2
+;	swap	d0
+	move.w	#0,d3
+	sub.w	d0,d3
+	move.w	d3,MatrixW
+	move.w	#0,d3
+	swap	d0
+	sub.w	d0,d3
+	move.w	d3,MatrixW+2*2
+	bsr.w	CalcDeterminante
+	move.l	d3,Det+4
+	move.l	Det+4,d3
+;	asl.l	#2,d3
+	move.l	Det,d2
+	divs	d2,d3
+	move.w	d3,Det+8
+
+;	move.l	#64,d2
+;	muls.w	Det+8,d2
+
+	movem.l	(sp)+,d0-d3
+;------
+	move.l	(a5,d1),d1
+	move.l	(a5,d2),d2
+
+	move.w	d2,d3
+	sub.w	d1,d3
+	muls.w	Det+8,d3
+	asr.l	#8,d3
+	add.w	d3,d1
+;	add.w	d3,d1
+;	add.w	d3,d1
+;	add.w	d3,d1
+	swap	d1
+	swap	d2
+	move.w	d2,d3
+	sub.w	d1,d3
+	muls.w	Det+8,d3
+	asr.l	#8,d3
+	add.w	d3,d1
+	swap	d1
+	swap	d2
+
+;	move.w	Tmp,d3
+;	move.w	Tmp,MatrixW+2
+;	neg.w	MatrixW+2
+;	move.w	#-(Deep-0),MatrixW+2*2+2
+;	move.w	d2,d3
+;	sub.w	d1,d3
+;	move.w	d3,MatrixW+2*2
+;	swap	d1
+;	swap	d2
+;	move.w	d2,d3
+;	sub.w	d1,d3
+;	move.w	d3,MatrixW
+;	bsr.w	CalcDeterminante
+;	move.w	d3,Tmp+2
+
+;	move.w	#0,d3
+;	sub.w	d1,d3
+;	move.w	d3,MatrixW
+;	swap	d1
+;	swap	d2
+;	move.w	#0,d3
+;	sub.w	d1,d3
+;	move.w	d3,MatrixW+2*2
+;	bsr.w	CalcDeterminante
+
+	move.l	#64,d6
+	muls.w	Det+8,d6
+	asl.l	#8,d6
+;	asl.l	#2,d6
+	divs.w	d1,d6
+	ext.l	d6
+	asl.l	#8,d6
+;	asl.l	#4,d6
+;	move.l	#0,d6
+
+	move.l	#64<<(DeepShift+8),d4
+;	asl.l	#DeepShift,d4
+;	asl.l	#8,d4
+;	asl.l	#2,d4
+	add.l	#((2)<<(6+DeepShift)),d4
+	divs.w	d1,d4
 	ext.l	d4
-	asl.l	#7,d4
-
-	move.l	#64,d1
-	asl.l	#DeepShift,d1
-	divs.w	d3,d1
-	swap	d3		; z1
-	ext.l	d1
-	asl.l	#7,d1
-	sub.l	d4,d1
-	divs.w	d2,d1
-	ext.l	d1
-	move.l	d1,RLaddY+2
+;	asl.l	#8,d4
 	sub.l	#$400,d4
-	muls.w	4(a6,d5),d1
-	add.l	d1,d4
+;	asl.l	#4,d4
+;	asl.l	#4,d4
 
-	swap	d3		; z2
-	move.l	#64<<12,d1
-	divs.w	d3,d1
-	ext.l	d1
-	asl.l	#8,d1
-	divs.w	d2,d1
-	ext.l	d1
-	move.l	d1,RLaddT+2
-	move.l	#$0,d6
-	move.w	4(a6,d5),d2
-	ext.l	d2
-	muls	d2,d1
-	add.l	d1,d6
+;	asr.w	#2,d1
+;	move.l	#64,d1
+;	asl.l	#DeepShift,d1
+;	divs.w	d2,d1
+;	swap	d3		; z1
+;	ext.l	d1
+;	asl.l	#7,d1
+;	sub.l	d4,d1
+;	divs.w	d2,d1
+;	ext.l	d1
+;	move.l	d1,RLaddY+2
+;	muls.w	4(a6,d5),d1
+;	add.l	d1,d4
 
-	move.l	#1<<16,d2
-	move.l	d2,d1
-	divs.w	d3,d2
-	swap	d3		; z1
-	divs.w	d3,d1
-	ext.l	d2
-	ext.l	d1
-	asl.l	#8,d2
-	asl.l	#8,d1
-	sub.l	d1,d2
-	divs.w	6(a6,d5),d2
-	ext.l	d2
-	move.l	d2,RLaddZ+2
-	move.w	4(a6,d5),d3
+;	swap	d3		; z2
+;	move.l	#64<<12,d1
+;	move.l	#$0,d6
+;	asl.l	#4,d6
+;	sub.l	d6,d1
+;	divs.w	d3,d1
+;	ext.l	d1
+;	asl.l	#8,d1
+;	divs.w	d2,d1
+;	ext.l	d1
+;	move.l	d1,RLaddT+2
+
+	move.l	#$1<<20,d3
+;	move.l	d2,d1
+;	asl.l	#2,d3
+	divs.w	d1,d3
 	ext.l	d3
-	muls	d3,d2
-	add.l	d2,d1
-	move.l	d1,d3
+	asl.l	#8,d3
+;	swap	d3		; z1
+;	divs.w	d3,d1
+;	ext.l	d2
+;	ext.l	d1
+;	asl.l	#8,d2
+;	asl.l	#8,d1
+;	sub.l	d1,d2
+;	divs.w	6(a6,d5),d2
+;	ext.l	d2
+;	move.l	d2,RLaddZ+2
+
+	move.l	8(a6,d5),RLaddZ+2
+	move.l	12(a6,d5),RLaddT+2
+	move.l	16(a6,d5),RLaddY+2
 
 RLnonewwall:
 	movem.l	d0-d7/a0-a6,-(sp)
@@ -862,8 +1215,9 @@ RLnonewwall:
 	divs.w	d0,d5
 	and.l	#63,d5
 	move.l	d4,d0
+;	lsr.l	#2,d0
 	eor.b	d0,d0
-	lsr.l	#1,d0
+	lsr.l	#2,d0
 	or.l	d0,d5
 	and.l	#%1111111111111,d5
 ;	and.l	#%111111,d5
@@ -873,7 +1227,8 @@ RLbit:	move.l	#$80000000,d3
 	nop
 	nop
 	move.l	d4,d0
-	asr.l	#7,d0
+	asr.l	#8,d0
+;	asr.l	#2,d0
 	add.w	#20,d0
 	move.w	#ScreenHeight/2,d1
 	sub.w	d0,d1
@@ -884,8 +1239,13 @@ RL5
 	add.w	#ScreenWidth/8*2*ScreenHeight,d1
 	eor.l	d3,(a3,d1)
 
+	move.l	d4,d0
+	asr.l	#8,d0
+;	asr.l	#2,d0
+	cmp.l	#116,d0
+	bgt.b	RLnor
 	bsr	RenderTexLine
-	movem.l	(sp)+,d0-d7/a0-a6
+RLnor:	movem.l	(sp)+,d0-d7/a0-a6
 RLnorender:
 RLaddY:	add.l	#$00000000,d4
 RLaddT:	add.l	#$00000000,d6
@@ -894,6 +1254,7 @@ RLaddZ:	add.l	#$00000000,d3
 	move.l	RLbit+2,d5
 	ror.l	#1,d5
 	move.l	d5,RLbit+2
+	add.w	#1,Tmp
 	dbf	d7,_lh
 	add.l	#4,a3
 	add.l	#4,a1
@@ -928,13 +1289,6 @@ ffe:	move.b	#$fe,(a0)+
 	dbf	d0,ffe
 
 	rts
-StatsNonCached	= 0
-StatsCached     = 2
-Statistics:
-	dc.w	0
-	dc.w	0
-TexAnim:
-	dc.l	0
 ;--------------------------------------------------------------------	
 	EVEN
 Lines8	= ScreenHeight/16*2*Planes
@@ -1230,22 +1584,6 @@ StartBlitList:
 NoBlitList:
 	rts
 ;--------------------------------------------------------------------
-	EVEN
-BltSrc:	dc.l	0
-BltDst:	dc.l	0
-BltClr:	dc.l	0
-movingX:dc.w	0
-BlitListBeg:
-	dc.w	0
-BlitListEnd:
-	dc.w	0,0
-Frames:
-	dc.w	0
-;--------------------------------------------------------------------
-ID	= 0
-Tex	= 2
-Next	= 6
-Pre	= 4
 RenderTexLine:
 	; d5 - TexLine
 	; a6 - TexCacheMap
@@ -1286,10 +1624,29 @@ Copper:
 	dc.l	Copper1,Copper2,Copper3
 Screens:
 	dc.l	Screen1,Screen2,Screen3
-;--------------------------------------------------------------------
-;	section	tex1,DATA_F
-SinPos:
+	EVEN
+StatsNonCached	= 0
+StatsCached     = 2
+Statistics:
+	dc.w	0
+	dc.w	0
+TexAnim:
+	dc.l	0
+
+BltSrc:	dc.l	0
+BltDst:	dc.l	0
+BltClr:	dc.l	0
+movingX:dc.w	0
+BlitListBeg:
+	dc.w	0
+BlitListEnd:
 	dc.w	0,0
+Frames:
+	dc.w	0
+BEnd:	dc.w	0
+XPos:	dc.w	0
+ZPos:	dc.w	128
+SinPos:	dc.w	0,0
 	EVEN
 Sinus:
 	DC.W	$0001,$0002,$0004,$0005,$0007,$0009,$000A,$000C,$000D,$000F
@@ -1398,6 +1755,8 @@ Sinus:
 
 	EVEN
 VectorsOrg:		; x, z
+;	dc.w	-64,128
+;	dc.w	64,128
 	dc.w	-64-128,128-128
 	dc.w	-64,128
 	dc.w	-64,256
@@ -1405,20 +1764,25 @@ VectorsOrg:		; x, z
 	dc.w	64,128
 	dc.w	64+128,128-128
 	EVEN
+t = 0
 Vectors:		; x, z
-	dc.w	-64-128-64,128
-	dc.w	-64-64,128
-	dc.w	-64-64,256
-	dc.w	64-64,256
-	dc.w	64-64,128
-	dc.w	64+128-64,128
+;	dc.w	-64,128+16
+;	dc.w	64,256+16
+;	dc.w	-64-128,256
+;	dc.w	-64,256
+	dc.w	-64-128,128+t
+	dc.w	-64,128+t
+	dc.w	-64,256+t
+	dc.w	64,256+t
+	dc.w	64,128+t
+	dc.w	64+128,128+t
 	EVEN
 Walls:			; p1, p2, tex, tmp
-	dc.w	0,1,0,0,3,0,0,0
-	dc.w	1,2,0,0,0,0,0,0
-	dc.w	2,3,0,0,1,0,0,0
-	dc.w	3,4,0,0,2,0,0,0
-	dc.w	4,5,0,0,3,0,0,0
+	dc.w	0,1,3,0,3,0,0,0,0,0
+	dc.w	1,2,0,0,0,0,0,0,0,0
+	dc.w	2,3,1,0,1,0,0,0,0,0
+	dc.w	3,4,2,0,2,0,0,0,0,0
+	dc.w	4,5,3,0,3,0,0,0,0,0
 	EVEN
 Palette:
 	dc.w	$0008
@@ -1483,6 +1847,9 @@ ColorReflBottom:
 	dc.w	$0bab
 	dc.w	$0cce
 
+Tmp2:
+	dc.l	0,0
+
 Texture:
 	incbin	Wolfenstein3D/texanim1.bin
 *********************************************************************
@@ -1513,7 +1880,7 @@ Copper1:
 	dc.w	$0094,DFETCHSTOP
 	dc.w	$0108,0 ; ScreenWidth/8*(Planes-1)
 	dc.w	$010a,0 ; ScreenWidth/8*(Planes-1)
-	dc.w	$0102,$0000
+	dc.w	$0102,$0011
 	dc.w	$0104,$0000
 Bitplane1:
 	dc.w	$00e0,$0000
@@ -1585,7 +1952,7 @@ Copper2:
 	dc.w	$0094,DFETCHSTOP
 	dc.w	$0108,0 ; ScreenWidth/8*(Planes-1)
 	dc.w	$010a,0 ; ScreenWidth/8*(Planes-1)
-	dc.w	$0102,$0000
+	dc.w	$0102,$0011
 	dc.w	$0104,$0000
 Bitplane2:
 	dc.w	$00e0,$0000
@@ -1657,7 +2024,7 @@ Copper3:
 	dc.w	$0094,DFETCHSTOP
 	dc.w	$0108,0 ; ScreenWidth/8*(Planes-1)
 	dc.w	$010a,0 ; ScreenWidth/8*(Planes-1)
-	dc.w	$0102,$0000
+	dc.w	$0102,$0011
 	dc.w	$0104,$0000
 Bitplane3:
 	dc.w	$00e0,$0000
@@ -1719,12 +2086,6 @@ PlaneDouble3:
 	dc.w	$0180,$0008
 
 	dc.w	$ffff,$fffe
-
-
-
-
-
-;	dc.w	$0100,$0200
 
 ;	dc.w	$008e,$2c81
 ;	dc.w	$0090,$2cc1
@@ -1790,6 +2151,8 @@ BlitList:
 	ds.b	32*BlitListLen
 ScreenPreRender:
 	ds.w	ScreenWidth
+ScreenPreRenderZ:
+	ds.l	ScreenWidth
 BitZoom:
 	ds.l	65536
 InFrustumLeft:
@@ -1798,3 +2161,8 @@ InFrustumRight:
 	ds.b	128-4
 InFrustumToTest:
 	ds.b	128-4
+MatrixW:
+	ds.w	2*2
+Det:
+	ds.l	3
+Tmp:	ds.l	2
