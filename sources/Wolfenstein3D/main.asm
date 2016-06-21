@@ -9,24 +9,36 @@ Init:
 ;	rts
 
 	bra	wq1
-	lea	Sinus,a1
+	lea	Sinus,a2
+	move.w	#0,d0
+	move.w	d0,d1
+	add.w	#SinusSize/4,d1
+	add.w	d0,d0
+	add.w	d1,d1
+	and.l	#(SinusSize-1)*2,d0
+	and.l	#(SinusSize-1)*2,d1
+	move.w	(a2,d0.w),d3
+	swap	d3
+	move.w	(a2,d1.w),d3
 	move.w	SinPos,d0
-	move.w	(a1,d0),d0
-	eor.w	d0,d0
-	add.w	#0,d0
+	move.w	(a2,d0),d0
+	add.w	#128+12+128,d0
 	lea	VectorsOrg,a1
 	lea	Vectors,a0
 	move.w	XPos,d2
-	move.w	#6-1,d7
-loopd2_:	move.w	2(a1),d1
+	move.w	ZPos,d4
+	move.w	#9-1,d7
+loopd4:	move.l	(a1),d1
+	bsr	Rotation
 	add.w	d0,d1
-	move.w	d1,2(a0)
-	move.w	(a1),d1
+	add.w	d4,d1
+	swap	d1
 	add.w	d2,d1
-	move.w	d1,(a0)
+	swap	d1
+	move.l	d1,(a0)
 	add	#4,a0
 	add	#4,a1
-	dbf	d7,loopd2_
+	dbf	d7,loopd4
 wq:	bsr	InitBitZoom
 	bsr	RenderLoop
 	rts
@@ -217,8 +229,6 @@ mainloop:
 
 ;	move.w	#$888,$dff180
 
-	bsr.w	Control
-
 	move.w	#$0,$dff036
 	move.l	Screens+4,a0
 	add.l	#ScreenWidth/8*ScreenHeight*4,a0
@@ -242,17 +252,30 @@ gfg:	move.l	d0,(a0)+
 ;	dbf	d7,gfg1
 
 	bra	noControl
+	bsr.w	Control
+	lea	Sinus,a2
+	move.w	Rot,d0
+	move.w	d0,d1
+	add.w	#SinusSize/4,d1
+	add.w	d0,d0
+	add.w	d1,d1
+	and.l	#(SinusSize-1)*2,d0
+	and.l	#(SinusSize-1)*2,d1
+	move.w	(a2,d0.w),d3
+	swap	d3
+	move.w	(a2,d1.w),d3
 	lea	VectorsOrg,a1
 	lea	Vectors,a0
 	move.w	ZPos,d0
 	move.w	XPos,d2
-	move.w	#6-1,d7
-loopd1:	move.w	2(a1),d1
+	move.w	#PointNum-1,d7
+loopd1:	move.l	(a1),d1
+	bsr	Rotation
 	add.w	d0,d1
-	move.w	d1,2(a0)
-	move.w	(a1),d1
+	swap	d1
 	add.w	d2,d1
-	move.w	d1,(a0)
+	swap	d1
+	move.l	d1,(a0)
 	add	#4,a0
 	add	#4,a1
 	dbf	d7,loopd1
@@ -260,24 +283,35 @@ loopd1:	move.w	2(a1),d1
 noControl:
 ;	bra.b	nof
 
-	lea	Sinus,a1
+	lea	Sinus,a2
+	move.w	Rot,d0 ; Rot,d0
+	move.w	d0,d1
+	add.w	#SinusSize/4,d1
+	add.w	d0,d0
+	add.w	d1,d1
+	and.l	#(SinusSize-1)*2,d0
+	and.l	#(SinusSize-1)*2,d1
+	move.w	(a2,d0.w),d3
+	swap	d3
+	move.w	(a2,d1.w),d3
+	
 	move.w	SinPos,d0
-	move.w	(a1,d0),d0
-	add.w	#128+8,d0
+	move.w	(a2,d0),d0
+	asr.w	#1,d0
+	add.w	#128,d0
 	lea	VectorsOrg,a1
 	lea	Vectors,a0
 	move.w	XPos,d2
-	move.w	ZPos,d3
-	move.w	#6-1,d7
-loopd2:	move.w	2(a1),d1
+	move.w	ZPos,d4
+	move.w	#PointNum-1,d7
+loopd2:	move.l	(a1)+,d1
+	bsr	Rotation
 	add.w	d0,d1
-	add.w	d3,d1
-	move.w	d1,2(a0)
-	move.w	(a1),d1
+	add.w	d4,d1
+	swap	d1
 	add.w	d2,d1
-	move.w	d1,(a0)
-	add	#4,a0
-	add	#4,a1
+	swap	d1
+	move.l	d1,(a0)+
 	dbf	d7,loopd2
 
 nof:
@@ -304,6 +338,10 @@ ty:
 	and.w	#(SinusSize-1)*2,SinPos
 	add.w	#10*2,SinPos+2
 	and.w	#(SinusSize-1)*2,SinPos+2
+	move.w	Rot,d0
+;	add.w	Frames,d0
+	and.w	#SinusSize-1,d0
+	move.w	d0,Rot
 	move.l	TexAnim,d0
 	add.l	#1,d0
 	cmp.l	#12,d0
@@ -540,8 +578,34 @@ Switch:
 	move.l	d0,8(a0)
 	rts
 ;--------------------------------------------------------------------	
-	EVEN
-	EVEN
+Rotation:
+	; d3 = sin/cos
+	
+	movem.l	d2/d4/d5,-(sp)
+	move.w	d1,d2
+	swap	d1
+	ext.l	d1
+	ext.l	d2
+	move.l	d1,d4
+	muls.w	d3,d4	; x*cos
+	asr.l	#8,d4
+	move.l	d2,d5
+	muls.w	d3,d5	; z*cos
+	asr.l	#8,d5
+	swap	d3
+	muls.w	d3,d1	; x*sin
+	asr.l	#8,d1
+	muls.w	d3,d2	; z*sin
+	asr.l	#8,d2
+	neg.l	d2
+	add.l	d5,d1
+	add.l	d4,d2
+	swap	d1
+	move.w	d2,d1
+	swap	d1
+	swap	d3
+	movem.l	(sp)+,d2/d4/d5
+	rts
 ;--------------------------------------------------------------------	
 RL_CheckInside:
 	; in  = d0,d1 points
@@ -627,8 +691,10 @@ CalcDeterminante:
 	; ret d3 - det
 	move.l	d2,CDd2+2
 	move.w	MatrixW,d3
+	ext.l	d3
 	muls.w	MatrixW+2*2+2,d3
 	move.w	MatrixW+2,d2
+	ext.l	d2
 	muls.w	MatrixW+2*2,d2
 	sub.l	d2,d3
 CDd2:	move.l	#0,d2
@@ -662,7 +728,7 @@ RL_l3:	move.l	d0,(a0)+
 	lea	InFrustumRight,a3
 	lea	InFrustumToTest,a4
 	move.w	#0,d6
-	move.w	#5-1,d7
+	move.w	#WallsNum-1,d7
 ;	move.w	#1-1,d7
 RL3:	move.w	d6,d5
 	muls.w	#20,d5
@@ -712,12 +778,12 @@ RL3:	move.w	d6,d5
 
 	move.w	d0,d4
 	lsl.w	#2,d0
-	move.l	(a5,d0),d0	; x1-vector
+	move.l	(a5,d0.w),d0	; x1-vector
 	swap	d4
 	move.w	d1,d4
 	swap	d4
 	lsl.w	#2,d1
-	move.l	(a5,d1),d1	; x2-vector
+	move.l	(a5,d1.w),d1	; x2-vector
 	cmp.w	#8,d0
 	bge.w	RL_x_inFront
 
@@ -886,7 +952,7 @@ RL_newD1:
 
 	move.w	d1,d2
 	sub.w	d0,d2
-	move.w	d2,6(a6,d5)
+	move.w	d2,6(a6,d5.w)
 
 	sub.w	d0,d1
 	subq.w	#1,d1
@@ -914,7 +980,7 @@ RL_newD1:
 	divs.w	d4,d3
 	ext.l	d3
 	asl.l	#4,d3
-	move.l	d3,12(a6,d5)	; RLaddT
+	move.l	d3,12(a6,d5.w)	; RLaddT
 
 	move.l	#$1<<20,d0
 	divs.w	Tmp,d0
@@ -926,7 +992,7 @@ RL_newD1:
 	asl.l	#8,d3
 	divs.w	d4,d3
 	ext.l	d3
-	move.l	d3,8(a6,d5)	; RLaddZ
+	move.l	d3,8(a6,d5.w)	; RLaddZ
 	asl.l	#8,d0
 	move.l	d0,RL_gZ+2
 
@@ -948,7 +1014,7 @@ RL_newD1:
 	asl.l	#4,d3
 	divs.w	d4,d3
 	ext.l	d3
-	move.l	d3,16(a6,d5)	; RLaddY
+	move.l	d3,16(a6,d5.w)	; RLaddY
 
 	
 	movem.l	(sp)+,d0/d1/d3/d2/d6
@@ -1146,14 +1212,14 @@ eewh:
 ;	asl.l	#4,d6
 ;	move.l	#0,d6
 
-	move.l	#64<<(DeepShift+8),d4
+	move.l	#64<<(DeepShift+2),d4
 ;	asl.l	#DeepShift,d4
 ;	asl.l	#8,d4
 ;	asl.l	#2,d4
-	add.l	#((2)<<(6+DeepShift)),d4
+	add.l	#((2)<<(DeepShift)),d4
 	divs.w	d1,d4
 	ext.l	d4
-;	asl.l	#8,d4
+	asl.l	#6,d4
 	sub.l	#$400,d4
 ;	asl.l	#4,d4
 ;	asl.l	#4,d4
@@ -1209,9 +1275,9 @@ RLnonewwall:
 	movem.l	d0-d7/a0-a6,-(sp)
 
 	move.l	d6,d5
-	asr.l	#2,d5
+	asr.l	#3,d5
 	move.l	d3,d0
-	asr.l	#6,d0
+	asr.l	#7,d0
 	divs.w	d0,d5
 	and.l	#63,d5
 	move.l	d4,d0
@@ -1645,7 +1711,8 @@ Frames:
 	dc.w	0
 BEnd:	dc.w	0
 XPos:	dc.w	0
-ZPos:	dc.w	128
+ZPos:	dc.w	0
+Rot:	dc.w	0
 SinPos:	dc.w	0,0
 	EVEN
 Sinus:
@@ -1755,35 +1822,43 @@ Sinus:
 
 	EVEN
 VectorsOrg:		; x, z
-;	dc.w	-64,128
-;	dc.w	64,128
-	dc.w	-64-128,128-128
-	dc.w	-64,128
-	dc.w	-64,256
-	dc.w	64,256
-	dc.w	64,128
-	dc.w	64+128,128-128
-	EVEN
-t = 0
-Vectors:		; x, z
-;	dc.w	-64,128+16
-;	dc.w	64,256+16
-;	dc.w	-64-128,256
-;	dc.w	-64,256
-	dc.w	-64-128,128+t
-	dc.w	-64,128+t
-	dc.w	-64,256+t
-	dc.w	64,256+t
-	dc.w	64,128+t
-	dc.w	64+128,128+t
-	EVEN
+	dc.w	-64-128,64
+	dc.w	-64,64+128
+	dc.w	-64,64+128+128
+	dc.w	64,64+128+128
+	dc.w	64,64+128
+	dc.w	64+128,64
+	dc.w	64+128+128,64
+	dc.w	64+128+128,-64
+	dc.w	64+128,-64
+	dc.w	64,-64-128
+	dc.w	64,-64-128-128
+	dc.w	-64,-64-128-128
+	dc.w	-64,-64-128
+	dc.w	-64-128,-64
+	dc.w	-64-128-128,-64
+	dc.w	-64-128-128,64
+VectorsOrgEnd:
+PointNum = (VectorsOrgEnd-VectorsOrg)/4
 Walls:			; p1, p2, tex, tmp
 	dc.w	0,1,3,0,3,0,0,0,0,0
 	dc.w	1,2,0,0,0,0,0,0,0,0
 	dc.w	2,3,1,0,1,0,0,0,0,0
 	dc.w	3,4,2,0,2,0,0,0,0,0
 	dc.w	4,5,3,0,3,0,0,0,0,0
-	EVEN
+	dc.w	5,6,0,0,3,0,0,0,0,0
+	dc.w	6,7,1,0,0,0,0,0,0,0
+	dc.w	7,8,2,0,1,0,0,0,0,0
+	dc.w	8,9,3,0,2,0,0,0,0,0
+	dc.w	9,10,0,0,3,0,0,0,0,0
+	dc.w	10,11,1,0,0,0,0,0,0,0
+	dc.w	11,12,2,0,1,0,0,0,0,0
+	dc.w	12,13,3,0,2,0,0,0,0,0
+	dc.w	13,14,0,0,3,0,0,0,0,0
+	dc.w	14,15,1,0,3,0,0,0,0,0
+	dc.w	15,0,2,0,3,0,0,0,0,0
+WallsEnd:
+WallsNum = (WallsEnd-Walls)/(2*10)
 Palette:
 	dc.w	$0008
 	dc.w	$0533
@@ -2147,6 +2222,8 @@ ScreenStats:
 ;--------------------------------------------------------------------
 ;--------------------------------------------------------------------
 	section	tex,BSS_F
+Vectors:		; x, z
+	ds.l	PointNum
 BlitList:
 	ds.b	32*BlitListLen
 ScreenPreRender:
