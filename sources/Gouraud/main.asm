@@ -90,13 +90,12 @@ clo:	move.w	(a0)+,d0
 ;	d2 = x1, d3 = y1
 ;	d4 = ScreenWidth
 ;	a0 = ScreenPtr
-mm:
 
-	move.l	#$ffffffff,Screen1
-	move.l	#$ffffffff,Screen1+ScreenWidth/8*128+24
+;	move.l	#$ffffffff,Screen1
+;	move.l	#$ffffffff,Screen1+ScreenWidth/8*128+24
 
 	move.l	#Copper1,$dff080
-
+mm:
 ;--------------------------------------------------------------------	
 mainloop:
 .wframe:
@@ -107,27 +106,18 @@ mainloop:
 .wframe2:
 	cmp.b	#$30,$dff006
 	bne.b	.wframe2
-;	move.w	#$888,$dff180
-
-;	bsr	RenderLoop
+	move.w	#$888,$dff180
 
 	bsr	BlitWait
 
-	bsr INITLINE
+	bsr	RenderLoop
 
-	move.l	#128,d2	; xstart
-	move.l	#0,d3	; ystart
-	move.l	#64,d0	; xend
-	move.l	#64,d1	; yend
-	move.l	Screens,a5
-	bsr	DRAWLINE
+	move.w	BlitListEnd+2,BlitListEnd
+	bsr	StartBlitList
 
-	move.l	#128,d2	; xstart
-	move.l	#0,d3	; ystart
-	move.l	#192,d0	; xend
-	move.l	#64,d1	; yend
-	move.l	Screens,a5
-	bsr	DRAWLINE
+
+	bsr BlitWait
+	move.w	#$000,$dff180
 
 	lea	Screens,a0
 	bsr	Switch
@@ -177,10 +167,10 @@ IntLevel3:
 	move.w	#$0020,$dff09c
 	bra.w	IntLevel3_end
 .blit_handle:
-;	move.w	BlitListBeg,d0
-;	move.w	BlitListEnd,d1
-;	cmp.w	d0,d1
-;	bne.b	.blit_next
+	move.w	BlitListBeg,d0
+	move.w	BlitListEnd,d1
+	cmp.w	d0,d1
+	bne.b	.blit_next
 	move.w	#0,BEnd
 	move.w	#$0040,$dff09c
 	move.w	#$0040,$dff09c
@@ -206,6 +196,78 @@ Switch:
 	rts
 ;--------------------------------------------------------------------	
 RenderLoop:
+	move.l	Screens+4,a1
+	bsr	ClrScr
+
+	move.l	#128,d2	; xstart
+	move.l	#1,d3	; ystart
+	move.l	#128-127,d0	; xend
+	move.l	#128,d1	; yend
+	move.l	Screens+4,a5
+	bsr	DRAWLINE
+
+	move.l	#1,d2	; xstart
+	move.l	#128,d3	; ystart
+	move.l	#128,d0	; xend
+	move.l	#255,d1	; yend
+	move.l	Screens+4,a5
+	bsr	DRAWLINE
+
+	move.l	#128,d2	; xstart
+	move.l	#1,d3	; ystart
+	move.l	#128+127,d0	; xend
+	move.l	#128,d1	; yend
+	move.l	Screens+4,a5
+	bsr	DRAWLINE
+
+	move.l	#128+127,d2	; xstart
+	move.l	#128,d3	; ystart
+	move.l	#128,d0	; xend
+	move.l	#255,d1	; yend
+	move.l	Screens+4,a5
+	bsr	DRAWLINE
+
+	move.l	Screens+4,d0
+	bsr	Fill
+	rts
+;--------------------------------------------------------------------
+ClrScr:
+	; a1 = dst
+	move.w	#(ScreenHeight)*64+((ScreenWidth/16)&63),-(sp)	; Size
+	MOVE.W	#0,-(sp)
+	MOVE.W	#0,-(sp)
+	MOVE.L	#-1,-(sp)
+	move.l	a1,-(sp)					; D-Dest
+	move.l	#0,-(sp)				; C-Mask
+	move.l	0,-(sp)					; B-Src1
+	move.l	0,-(sp)					; A-Src0
+	move.w	#0,-(sp)		; D-Mod
+	move.w	#0,-(sp)		; C-Mod
+	move.w	#0,-(sp)		; B-Mod
+	move.w	#0,-(sp)		; A-Mod
+	move.l	#$01000000,-(sp)				; BlitCon0/1
+	bsr	SetBlit
+	rts
+;--------------------------------------------------------------------
+blitw	=ScreenWidth/16			;sprite width in words
+blith	=ScreenHeight			;sprite height in lines
+Fill:
+	add.l	#blitw*2-2,d0		; Screen(X)
+	move.w	#blith*64+blitw,-(sp)
+	move.w	#-1,-(sp)
+	move.w	#-1,-(sp)
+	move.l	#-1,-(sp)
+	move.l	d0,-(sp)
+	move.l	#0,-(sp)
+	move.l	#0,-(sp)
+	move.l	d0,-(sp)
+	move.w	#-(ScreenWidth/8+blitw*2),-(sp)
+	move.w	#0,-(sp)
+	move.w	#0,-(sp)
+	move.w	#-(ScreenWidth/8+blitw*2),-(sp)
+	move.l	#$09f00012,-(sp)
+	bsr	SetBlit
+
 	rts
 ;--------------------------------------------------------------------
 SetBlit:
@@ -213,7 +275,7 @@ SetBlit:
 	lea	BlitList,a0
 	eor.l	d0,d0
 	move.w	BlitListEnd+2,d0
-	lsl.l	#5,d0
+	muls.w	#38,d0
 	move.l	(sp)+,(a0,d0)	; BLTCON0
 	move.w	(sp)+,4(a0,d0)	; BLTAMOD
 	move.w	(sp)+,6(a0,d0)	; BLTBMOD
@@ -223,7 +285,10 @@ SetBlit:
 	move.l	(sp)+,16(a0,d0)	; BLTBPTH
 	move.l	(sp)+,20(a0,d0)	; BLTCPTH
 	move.l	(sp)+,24(a0,d0)	; BLTDPTH
-	move.w	(sp)+,28(a0,d0)	; BLTSIZE
+	move.l	(sp)+,28(a0,d0)	; BLTAFWM
+	move.w	(sp)+,32(a0,d0)	; BLTADAT
+	move.w	(sp)+,34(a0,d0)	; BLTBDAT
+	move.w	(sp)+,36(a0,d0)	; BLTSIZE
 	move.w	BlitListEnd+2,d0
 	addq.w	#1,d0
 	and.w	#BlitListLen-1,d0
@@ -240,9 +305,14 @@ StartBlitList:
 	cmp.w	d0,d1
 	beq.w	NoBlitList
 	move.w	#1,BEnd
-	lsl.l	#5,d0
+	muls.w	#38,d0
+
 
 	lea	$dff000,a6
+.WAIT:
+	BTST	#$6,$2(A6)	; Wait on the blitter
+	BNE.S	.WAIT
+
 	add.l	d0,a0
 	move.l	(a0),BLTCON0(a6)
 	move.l	#$ffffffff,BLTAFWM(a6)
@@ -254,29 +324,18 @@ StartBlitList:
 	move.l	16(a0),BLTBPTH(a6)
 	move.l	20(a0),BLTCPTH(a6)
 	move.l	24(a0),BLTDPTH(a6)
+	move.l	28(a0),BLTAFWM(A6)	; FirstLastMask
+	move.w	32(a0),BLTADAT(A6)	; BLT data A
+	move.w	34(a0),BLTBDAT(A6)
 	move.w	BlitListBeg,d0
 	addq.w	#1,d0
 	and.w	#BlitListLen-1,d0
 	move.w	d0,BlitListBeg
-	move.w	28(a0),BLTSIZE(a6)
+	move.w	36(a0),BLTSIZE(a6)
 NoBlitList:
 	rts
 ;--------------------------------------------------------------------
 SINGLE = 0	; 2 = SINGLE BIT WIDTH
-BYTEWIDTH = 32
-
-INITLINE:
-	LEA.L	$DFF000,A6
-
-	.WAIT:	BTST	#$6,$2(A6)
-	BNE.S	.WAIT
-
-	MOVEQ	#-1,D1
-	MOVE.L	D1,$44(A6)	; FirstLastMask
-	MOVE.W	#$8000,$74(A6)	; BLT data A
-	MOVE.W	#BYTEWIDTH,$60(A6)	; Tot.Screen Width
-	MOVE.W	#$FFFF,$72(A6)
-	RTS
 ;*****************
 ;* DRAW LINE *
 ;*****************
@@ -286,7 +345,7 @@ INITLINE:
 DRAWLINE:
 	lea	$dff000,a6
 	SUB.W	D3,D1
-	MULU	#ScreenWidth,D3	; ScreenWidth * D3
+	MULU	#ScreenWidth/8,D3	; ScreenWidth * D3
 
 	MOVEQ	#$F,D4
 	AND.W	D2,D4	; Get lowest bits from D2
@@ -356,19 +415,15 @@ DRAW_DONTSETSIGN:
 
 ;--------- SET BLITTER ---------
 
-.WAIT:
-	BTST	#$6,$2(A6)	; Wait on the blitter
-	BNE.S	.WAIT
+;	bsr BlitWait
 
-	MOVE.W	D2,$52(A6)	; 2*dy-dx
-	MOVE.W	D1,$62(A6)	; 2*d2
+	move.l	d2,d5
 	SUB.W	D0,D2	; d2 = 2*dy-dx-dx
-	MOVE.W	D2,$64(A6)	; 2*dy-2*dx
 
 ;--------- MAKE LENGTH ---------
 
 	ASL.W	#6,D0	; d0 = 64*dx
-	ADD.W	#$0042,D0	; d0 = 64*(dx+1)+2
+;	ADD.W	#$0001,D0	; d0 = 64*(dx+1)+2
 
 ;--------- MAKE CONTROL 0+1 ---------
 
@@ -380,10 +435,48 @@ DRAW_DONTSETSIGN:
 	ADD.L	A5,D3	; SCREEN PTR
 
 	or.l	#$2,d7
-	MOVE.L	D7,$40(A6)	; BLTCON0 + BLTCON1
-	MOVE.L	D3,$48(A6)	; Source C
-	MOVE.L	D3,$54(A6)	; Destination D
-	MOVE.W	D0,$58(A6)	; Size
+
+	move.w	d0,-(sp)
+	MOVE.W	#$FFFF,-(sp)
+	MOVE.W	#$8000,-(sp)
+	MOVE.L	#-1,-(sp)
+	move.l	d3,-(sp)
+	move.l	d3,-(sp)
+	move.l	#0,-(sp)
+	move.l	d5,-(sp)
+	move.w	#0,-(sp)
+	move.w	#ScreenWidth/8,-(sp)
+	move.w	d1,-(sp)
+	move.w	d2,-(sp)
+	move.l	d7,-(sp)
+
+	bsr	SetBlit
+
+	rts
+
+	MOVE.l	D5,BLTAPTH(A6)	; 2*dy-dx
+	MOVE.W	D2,BLTAMOD(A6)	; 2*dy-2*dx
+	MOVE.W	D1,BLTBMOD(A6)	; 2*d2
+	MOVE.L	D7,BLTCON0(A6)	; BLTCON0 + BLTCON1
+	MOVE.L	D3,BLTCPTH(A6)	; Source C
+	MOVE.L	D3,BLTDPTH(A6)	; Destination D
+	MOVE.W	D0,BLTSIZE(A6)	; Size
+
+	rts
+	; move.w	BLTSIZE,-(sp)
+	; move.w	BLTBDAT,-(sp)
+	; move.w	BLTADAT,-(sp)
+	; move.l	BLTAFWM,-(sp)
+	; move.l	BLTDPTH,-(sp)
+	; move.l	BLTCPTH,-(sp)
+	; move.l	BLTBPTH,-(sp)
+	; move.l	BLTAPTH,-(sp)
+	; move.w	BLTDMOD,-(sp)
+	; move.w	BLTCMOD,-(sp)
+	; move.w	BLTBMOD,-(sp)
+	; move.w	BLTAMOD,-(sp)
+	; move.l	BLTCON0,-(sp)
+
 	RTS	
 ;--------------------------------------------------------------------	
 	SECTION	chip,DATA_C
@@ -394,7 +487,7 @@ DISPH           equ     ScreenHeight
 
 ; display window in raster coordinates (HSTART must be odd)
 HSTART          equ     129+(256-ScreenWidth)/2
-VSTART          equ     36+16
+VSTART          equ     36
 VEND            equ     VSTART+DISPH
 
 ; normal display data fetch start/stop (without scrolling)
@@ -462,8 +555,9 @@ ColorCopper1:
 	dc.w	$0106,$0000
 	dc.w	$0007+(VSTART<<8),$fffe
 	dc.w	$0100,(Planes<<12)
-	dc.w	$0180,$0000
-PlaneDouble1:
+;	dc.w	$0180,$0000
+;	dc.w	$0007+((VEND)<<8),$fffe
+;	dc.w	$0100,0
 	dc.w	$ffff,$fffe
 
 ;-----------
@@ -528,8 +622,9 @@ ColorCopper2:
 	dc.w	$0106,$0000
 	dc.w	$0007+(VSTART<<8),$fffe
 	dc.w	$0100,(Planes<<12)
-	dc.w	$0180,$0000
-PlaneDouble2:
+;	dc.w	$0180,$0000
+;	dc.w	$0007+((VEND)<<8),$fffe
+;	dc.w	$0100,0
 	dc.w	$ffff,$fffe
 
 ;-----------
@@ -594,7 +689,9 @@ ColorCopper3:
 	dc.w	$0106,$0000
 	dc.w	$0007+(VSTART<<8),$fffe
 	dc.w	$0100,(Planes<<12)
-	dc.w	$0180,$0000
+;	dc.w	$0180,$0000
+;	dc.w	$0007+((VEND)<<8),$fffe
+;	dc.w	$0100,0
 	dc.w	$ffff,$fffe
 
 
@@ -778,4 +875,4 @@ Palette:
 *********************************************************************
 	section	tex,BSS_F
 BlitList:
-	ds.b	32*BlitListLen
+	ds.b	38*BlitListLen
