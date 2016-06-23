@@ -4,6 +4,8 @@
 *********************************************************************
 	section	main,CODE_F
 Init:
+;	bra	mm
+
 	move.l	4.w,a6		; execbase
 	clr.l	d0
 	move.l	#gfxname,a1
@@ -84,6 +86,15 @@ clo:	move.w	(a0)+,d0
 	add	#4,a3
 	dbf	d7,clo
 
+;	d0 = x0, d1 = y0
+;	d2 = x1, d3 = y1
+;	d4 = ScreenWidth
+;	a0 = ScreenPtr
+mm:
+
+	move.l	#$ffffffff,Screen1
+	move.l	#$ffffffff,Screen1+ScreenWidth/8*128+24
+
 	move.l	#Copper1,$dff080
 
 ;--------------------------------------------------------------------	
@@ -98,9 +109,25 @@ mainloop:
 	bne.b	.wframe2
 ;	move.w	#$888,$dff180
 
-	bsr	RenderLoop
+;	bsr	RenderLoop
 
 	bsr	BlitWait
+
+	bsr INITLINE
+
+	move.l	#128,d2	; xstart
+	move.l	#0,d3	; ystart
+	move.l	#64,d0	; xend
+	move.l	#64,d1	; yend
+	move.l	Screens,a5
+	bsr	DRAWLINE
+
+	move.l	#128,d2	; xstart
+	move.l	#0,d3	; ystart
+	move.l	#192,d0	; xend
+	move.l	#64,d1	; yend
+	move.l	Screens,a5
+	bsr	DRAWLINE
 
 	lea	Screens,a0
 	bsr	Switch
@@ -150,10 +177,10 @@ IntLevel3:
 	move.w	#$0020,$dff09c
 	bra.w	IntLevel3_end
 .blit_handle:
-	move.w	BlitListBeg,d0
-	move.w	BlitListEnd,d1
-	cmp.w	d0,d1
-	bne.b	.blit_next
+;	move.w	BlitListBeg,d0
+;	move.w	BlitListEnd,d1
+;	cmp.w	d0,d1
+;	bne.b	.blit_next
 	move.w	#0,BEnd
 	move.w	#$0040,$dff09c
 	move.w	#$0040,$dff09c
@@ -235,6 +262,130 @@ StartBlitList:
 NoBlitList:
 	rts
 ;--------------------------------------------------------------------
+SINGLE = 0	; 2 = SINGLE BIT WIDTH
+BYTEWIDTH = 32
+
+INITLINE:
+	LEA.L	$DFF000,A6
+
+	.WAIT:	BTST	#$6,$2(A6)
+	BNE.S	.WAIT
+
+	MOVEQ	#-1,D1
+	MOVE.L	D1,$44(A6)	; FirstLastMask
+	MOVE.W	#$8000,$74(A6)	; BLT data A
+	MOVE.W	#BYTEWIDTH,$60(A6)	; Tot.Screen Width
+	MOVE.W	#$FFFF,$72(A6)
+	RTS
+;*****************
+;* DRAW LINE *
+;*****************
+
+; USES D0/D1/D2/D3/D4/D7/A5/A6
+
+DRAWLINE:
+	lea	$dff000,a6
+	SUB.W	D3,D1
+	MULU	#ScreenWidth,D3	; ScreenWidth * D3
+
+	MOVEQ	#$F,D4
+	AND.W	D2,D4	; Get lowest bits from D2
+
+;--------- SELECT OCTANT ---------
+
+	SUB.W	D2,D0
+	BLT.S	DRAW_DONT0146
+	TST.W	D1
+	BLT.S	DRAW_DONT04
+
+	CMP.W	D0,D1
+	BGE.S	DRAW_SELECT0
+	MOVEQ	#$11+SINGLE,D7	; Select Oct 4
+	BRA.S	DRAW_OCTSELECTED
+	DRAW_SELECT0:
+	MOVEQ	#1+SINGLE,D7	; Select Oct 0
+	EXG	D0,D1
+	BRA.S	DRAW_OCTSELECTED
+
+DRAW_DONT04:
+	NEG.W	D1
+	CMP.W	D0,D1
+	BGE.S	DRAW_SELECT1
+	MOVEQ	#$19+SINGLE,D7	; Select Oct 6
+	BRA.S	DRAW_OCTSELECTED
+	DRAW_SELECT1:
+	MOVEQ	#5+SINGLE,D7	; Select Oct 1
+	EXG	D0,D1
+	BRA.S	DRAW_OCTSELECTED
+
+
+DRAW_DONT0146:
+	NEG.W	D0
+	TST.W	D1
+	BLT.S	DRAW_DONT25
+	CMP.W	D0,D1
+	BGE.S	DRAW_SELECT2
+	MOVEQ	#$15+SINGLE,D7	; Select Oct 5
+	BRA.S	DRAW_OCTSELECTED
+DRAW_SELECT2:
+	MOVEQ	#9+SINGLE,D7	; Select Oct 2
+	EXG	D0,D1
+	BRA.S	DRAW_OCTSELECTED
+DRAW_DONT25:
+	NEG.W	D1
+	CMP.W	D0,D1
+	BGE.S	DRAW_SELECT3
+	MOVEQ	#$1D+SINGLE,D7	; Select Oct 7
+	BRA.S	DRAW_OCTSELECTED
+DRAW_SELECT3:
+	MOVEQ	#$D+SINGLE,D7	; Select Oct 3
+	EXG	D0,D1
+
+;--------- CALCULATE START ---------
+
+DRAW_OCTSELECTED:
+	ADD.W	D1,D1	; 2*dy
+	ASR.W	#3,D2	; x=x/8
+	EXT.L	D2
+	ADD.L	D2,D3	; d3 = x+y*40 = screen pos
+	MOVE.W	D1,D2	; d2 = 2*dy
+	SUB.W	D0,D2	; d2 = 2*dy-dx
+	BGE.S	DRAW_DONTSETSIGN
+	ORI.W	#$40,D7	; dx < 2*dy
+DRAW_DONTSETSIGN:
+
+;--------- SET BLITTER ---------
+
+.WAIT:
+	BTST	#$6,$2(A6)	; Wait on the blitter
+	BNE.S	.WAIT
+
+	MOVE.W	D2,$52(A6)	; 2*dy-dx
+	MOVE.W	D1,$62(A6)	; 2*d2
+	SUB.W	D0,D2	; d2 = 2*dy-dx-dx
+	MOVE.W	D2,$64(A6)	; 2*dy-2*dx
+
+;--------- MAKE LENGTH ---------
+
+	ASL.W	#6,D0	; d0 = 64*dx
+	ADD.W	#$0042,D0	; d0 = 64*(dx+1)+2
+
+;--------- MAKE CONTROL 0+1 ---------
+
+	ROR.W	#4,D4
+	ORI.W	#$B5a,D4	; $B4A - DMA + Minterm
+	SWAP	D7
+	MOVE.W	D4,D7
+	SWAP	D7
+	ADD.L	A5,D3	; SCREEN PTR
+
+	or.l	#$2,d7
+	MOVE.L	D7,$40(A6)	; BLTCON0 + BLTCON1
+	MOVE.L	D3,$48(A6)	; Source C
+	MOVE.L	D3,$54(A6)	; Destination D
+	MOVE.W	D0,$58(A6)	; Size
+	RTS	
+;--------------------------------------------------------------------	
 	SECTION	chip,DATA_C
 ;-----------
 ; display dimensions
@@ -259,7 +410,7 @@ Copper1:
 	dc.w	$0094,DFETCHSTOP
 	dc.w	$0108,0 ; ScreenWidth/8*(Planes-1)
 	dc.w	$010a,0 ; ScreenWidth/8*(Planes-1)
-	dc.w	$0102,$0011
+	dc.w	$0102,$0000
 	dc.w	$0104,$0000
 Bitplane1:
 	dc.w	$00e0,$0000
@@ -325,7 +476,7 @@ Copper2:
 	dc.w	$0094,DFETCHSTOP
 	dc.w	$0108,0 ; ScreenWidth/8*(Planes-1)
 	dc.w	$010a,0 ; ScreenWidth/8*(Planes-1)
-	dc.w	$0102,$0011
+	dc.w	$0102,$0000
 	dc.w	$0104,$0000
 Bitplane2:
 	dc.w	$00e0,$0000
@@ -391,7 +542,7 @@ Copper3:
 	dc.w	$0094,DFETCHSTOP
 	dc.w	$0108,0 ; ScreenWidth/8*(Planes-1)
 	dc.w	$010a,0 ; ScreenWidth/8*(Planes-1)
-	dc.w	$0102,$0011
+	dc.w	$0102,$0000
 	dc.w	$0104,$0000
 Bitplane3:
 	dc.w	$00e0,$0000
@@ -589,7 +740,7 @@ Sinus:
 
 Palette:
 	dc.w	$0000
-	dc.w	$0222
+	dc.w	$0fff
 	dc.w	$0444
 	dc.w	$0666
 	dc.w	$0888

@@ -1,4 +1,4 @@
-	incdir	data:AmigaDev/sources/
+k	incdir	data:AmigaDev/sources/
 	include "custom.i"
 	include "Wolfenstein3D/defines.i"
 *********************************************************************
