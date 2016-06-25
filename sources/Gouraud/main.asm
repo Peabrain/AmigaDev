@@ -1,3 +1,32 @@
+;half	org
+;1	2	%000001
+;3	6	%000010
+;4	8	%000011
+;-	9	%000100
+;5	10	%000101
+;-	11	%000110
+;6	12	%000111
+;-	13	%001000
+;7	14	%001001
+;-	15	%001010
+
+;1	h	%100001
+;2	o	%000001
+;3	h	%100010
+;4	h	%100011
+;5	h	%100101
+;6	h	%100111
+;7	h	%101001
+;8	o	%000011
+;9	o	%000100
+;10	o	%000101
+;11	o	%000110
+;12	o	%000111
+;13	o	%001000
+;14	o	%001001
+;15	o	%001010
+
+
 	incdir	data:AmigaDev/sources/
 	include "custom.i"
 	include "Gouraud/defines.i"
@@ -40,7 +69,7 @@ Init:
 
 	lea	Bitplane1,a0
 	move.l	#Screen1,d0
-	move.l	#Planes-1,d1
+	move.l	#6-1,d1
 .l1:
 	move.w	d0,6(a0)
 	swap	d0
@@ -52,7 +81,7 @@ Init:
 
 	lea	Bitplane2,a0
 	move.l	#Screen2,d0
-	move.l	#Planes-1,d1
+	move.l	#6-1,d1
 .l2:
 	move.w	d0,6(a0)
 	swap	d0
@@ -64,7 +93,7 @@ Init:
 
 	lea	Bitplane3,a0
 	move.l	#Screen3,d0
-	move.l	#Planes-1,d1
+	move.l	#6-1,d1
 .l3:
 	move.w	d0,6(a0)
 	swap	d0
@@ -88,8 +117,18 @@ clo:	move.w	(a0)+,d0
 	add	#4,a3
 	dbf	d7,clo
 
-	bsr	InitMasks
-	
+	lea	ColorPlane0,a0
+;	lea	ColorPlane1,a1
+;	lea	ColorPlane2,a2
+	move.l	#$0,d0
+;	move.l	#$00ff00ff,d1
+;	move.l	#$0000ff00,d2
+	move.w	#ScreenWidth/8*ScreenHeight/4-1,d7
+Il0:	move.l	d0,(a0)+
+;	move.l	d1,(a1)+
+;	move.l	d2,(a2)+
+	dbf	d7,Il0
+
 ;	d0 = x0, d1 = y0
 ;	d2 = x1, d3 = y1
 ;	d4 = ScreenWidth
@@ -116,8 +155,9 @@ mainloop:
 	move.w	BlitListEnd+2,BlitListEnd
 	bsr	StartBlitList
 
+
 	move.w	Frames,d0
-	muls.w	#8,d0
+	muls.w	#4,d0
 	move.w	d0,sinpos
 	;move.w	#0,Frames
 	lea	Sinus,a0
@@ -125,10 +165,10 @@ mainloop:
 	add.w	d0,d0
 	and.w	#SinusSize*2-1,d0
 	move.w	(a0,d0.w),d0
-	muls.w	#41,d0
-	add.l	#128,d0
+	muls.w	#(ScreenWidth-ADDS_D*15)/2-1,d0
+	add.l	#64,d0
 	asr.l	#8,d0
-	add.w	#41,d0
+	add.w	#(ScreenWidth-ADDS_D*15)/2,d0
 	move.w	d0,XEnd
 	
 	bsr	RenderLoop
@@ -212,409 +252,279 @@ Switch:
 	move.l	d0,8(a0)
 	rts
 ;--------------------------------------------------------------------	
-InitMasks:
-	lea	Mask0,a0
-	move.l	#0,a6		; Last Mask
-	move.w	#0,d4		; xoffs
-	move.w	#0,d5	 	; yoffs
-	bsr	.InitMask1
-
-	move.l	a0,a6
-	lea	Mask1,a0
-	move.w	#1,d4		; xoffs
-	move.l	#2,d5		; yoffs
-	bsr	.InitMask1
-
-	move.l	a0,a6
-	lea	Mask2,a0
-	move.w	#2,d4		; xoffs
-	move.l	#1,d5		; yoffs
-	bsr	.InitMask1
-
-	move.l	a0,a6
-	lea	Mask3,a0
-	move.w	#2,d4		; xoffs
-	move.l	#0,d5		; yoffs
-	bsr	.InitMask1
-
-	move.l	a0,a6
-	lea	Mask4,a0
-	move.w	#0,d4		; xoffs
-	move.l	#1,d5		; yoffs
-	bsr	.InitMask1
-
-	move.l	a0,a6
-	lea	Mask5,a0
-	move.w	#0,d4		; xoffs
-	move.l	#2,d5		; yoffs
-	bsr	.InitMask1
-
-	move.l	a0,a6
-	lea	Mask6,a0
-	move.w	#1,d4		; xoffs
-	move.l	#0,d5		; yoffs
-	bsr	.InitMask1
-
-	move.l	a0,a6
-	lea	Mask7,a0
-	move.w	#1,d4		; xoffs
-	move.l	#1,d5		; yoffs
-	bsr	.InitMask1
-
-	rts
-.InitMask1:
-	cmp.l	#0,a6
-	beq	.iclm
-	move.l	a0,a1
-	eor.l	d0,d0
-	move.w	#ScreenWidth/8*ScreenHeight/4-1,d7
-.clet4:	move.l	(a6)+,(a1)+
-	dbf	d7,.clet4
-	bra	.clet3
-.iclm:
-	move.l	a0,a1
-	eor.l	d0,d0
-	move.w	#ScreenWidth/8*ScreenHeight/4-1,d7
-.clet:	move.l	d0,(a1)+
-	dbf	d7,.clet
-.clet3:	
-	move.w	#ScreenHeight/3-1,d7
-;	sub.w	d5,d7
-	mulu.w	#ScreenWidth/8,d5
-	move.l	a0,a1
-	add.l	d5,a1
-.clet2:	move.w	d4,d1
-	move.w	#ScreenWidth/3-1,d6
-;	sub.w	d4,d6
-.clet1:	move.w	d1,d2
-	lsr.w	#3,d2
-	move.b	d1,d3
-	not.b	d3
-	bset	d3,(a1,d2.w)
-	add.w	#3,d1
-	dbf	d6,.clet1
-	add.l	#ScreenWidth/8*3,a1
-	dbf	d7,.clet2
-
-
-	rts
-;--------------------------------------------------------------------	
 RenderLoop:
+SH = ScreenHeight-1
+ADDS_T = 10
+ADDS_D = 0
+
 	move.l	Screens+8,a1
-	move.w	#(ScreenHeight*Planes)*64+((ScreenWidth/16)&63),d0
+	move.w	#(ScreenHeight*3)*64+((ScreenWidth/16)&63),d0
+	bsr	ClrScr
+
+	move.l	Screens+8,a1
+	add.l	#ScreenWidth/8*ScreenHeight*3,a1
+	move.w	#(ScreenHeight*3)*64+((ScreenWidth/16)&63),d0
 	bsr	ClrScr
 	
 	move.l	#LineScreen,a1
 	move.w	#(ScreenHeight)*64+((ScreenWidth/16)&63),d0
 	bsr	ClrScr
 
-;	move.l	#32,d2	; xstart
-;	move.l	#0,d3	; ystart
-;	move.l	#32,d0	; xend
-;	move.l	#64,d1	; yend
-;	move.l	Screens+4,a5
-;	bsr	DRAWLINE
+	move.l	#CarryScreen1,a1
+	move.w	#(ScreenHeight)*64+((ScreenWidth/16)&63),d0
+	bsr	ClrScr
+
+	move.l	#ColorPlane1,a1
+	move.w	#(ScreenHeight)*64+((ScreenWidth/16)&63),d0
+	bsr	ClrScr
+
+	move.l	#ColorPlane2,a1
+	move.w	#(ScreenHeight)*64+((ScreenWidth/16)&63),d0
+	bsr	ClrScr
+
+;1	h	%100001
+;2	o	%000001
+;3	h	%100010
+;4	h	%100011
+;5	h	%100101
+;6	h	%100111
+;7	h	%101001
+;8	o	%000011
+;9	o	%000100
+;10	o	%000101
+;11	o	%000110
+;12	o	%000111
+;13	o	%001000
+;14	o	%001001
+;15	o	%001010
 
 
-SH0 = 0
-SH1 = ScreenHeight/3
-SH2 = ScreenHeight*2/3
-SH3 = ScreenHeight
-SH = ScreenHeight-1
-ADDS = 2
+;--- Render Gouraud
 
-;----- Render ShadeBackGround
-
-	move.w	#0,d6
-	swap	d6
-	move.w	XEnd,d6
-	swap	d6
-	move.w	#4-1,d7
-RL_l1:	move.w	d6,d2	; xstart
-	move.w	#0,d3	; ystart
-	swap	d6
-	move.w	d6,d0	; xend
-	swap	d6
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-	add.w	#ADDS*9,d6
-	swap	d6	
-	add.w	#ADDS*9,d6
-	swap	d6
-	dbf	d7,RL_l1
-
-	move.l	#LineScreen,d0
-	move.l	#FillScreen,d1
-	bsr	Fill
-
-	move.l	#FillScreen,d0
+	move.l	#%010101011111011,d7
 	move.l	Screens+8,d1
-	move.l	#0,a1
-	move.w	#blith*64+blitw,d2
-	bsr	Copy
+	bsr	RenderBP
 
-	move.w	#0,d6
-	swap	d6
-	move.w	XEnd,d6
-	swap	d6
-	move.w	#4-1,d7
-RL_l2:	move.w	d6,d2	; xstart
-	move.w	#0,d3	; ystart
-	swap	d6
-	move.w	d6,d0	; xend
-	swap	d6
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-	add.w	#ADDS*9,d6
-	swap	d6	
-	add.w	#ADDS*9,d6
-	swap	d6
-	dbf	d7,RL_l2
-
-	move.w	#ADDS*9,d6
-	swap	d6
-	move.w	#ADDS*9,d6
-	add.w	XEnd,d6
-	swap	d6
-	move.w	#2-1,d7
-RL_l3:	move.w	d6,d2	; xstart
-	move.w	#0,d3	; ystart
-	swap	d6
-	move.w	d6,d0	; xend
-	swap	d6
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-	add.w	#ADDS*9*2,d6
-	swap	d6
-	add.w	#ADDS*9*2,d6
-	swap	d6
-	dbf	d7,RL_l3
-
-	move.l	#LineScreen,d0
-	move.l	#FillScreen,d1
-	bsr	Fill
-
-	move.l	#FillScreen,d0
+	move.l	#%100110010101100,d7
 	move.l	Screens+8,d1
 	add.l	#ScreenWidth/8*ScreenHeight,d1
-	move.l	#0,a1
-	move.w	#blith*64+blitw,d2
-	bsr	Copy
+	bsr	RenderBP
 
-	move.w	#ADDS*9,d6
-	swap	d6
-	move.w	#ADDS*9,d6
-	add.w	XEnd,d6
-	swap	d6
-	move.w	#2-1,d7
-RL_l4:	move.w	d6,d2	; xstart
-	move.w	#0,d3	; ystart
-	swap	d6
-	move.w	d6,d0	; xend
-	swap	d6
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-	add.w	#ADDS*9*2,d6
-	swap	d6
-	add.w	#ADDS*9*2,d6
-	swap	d6
-	dbf	d7,RL_l4
-;--------------
-;	rts
-;--- Render Color
-
-	move.w	#0,d2	; xstart
-	move.w	#0,d3	; ystart
-	move.w	XEnd,d0	; xend
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-
-	move.w	#ADDS*9*3,d2	; xstart
-	move.w	#0,d3	; ystart
-	move.w	#ADDS*9*3,d0	; xend
-	add.w	XEnd,d0
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-
-	move.l	#LineScreen,d0
-	move.l	#FillScreen,d1
-	bsr	Fill
-
-	move.l	#FillScreen+ScreenWidth/8*ScreenWidth/4,d0
+	move.l	#%000111100110000,d7
 	move.l	Screens+8,d1
-	add.l	#ScreenWidth/8*ScreenHeight*2+ScreenWidth/8*ScreenHeight/4,d1
-	move.l	#0,a1
-	move.w	#(blith/4)*64+blitw,d2
-	bsr	Copy
+	add.l	#ScreenWidth/8*ScreenHeight*2,d1
+	bsr	RenderBP
 
-	move.l	#FillScreen+ScreenWidth/8*ScreenWidth*3/4,d0
+	move.l	#%111000001000000,d7
 	move.l	Screens+8,d1
-	add.l	#ScreenWidth/8*ScreenHeight*2+ScreenWidth/8*ScreenHeight*3/4,d1
-	move.l	#0,a1
-	move.w	#(blith/4)*64+blitw,d2
-	bsr	Copy
+	add.l	#ScreenWidth/8*ScreenHeight*3,d1
+	bsr	RenderBP
 
-	move.l	#FillScreen+ScreenWidth/8*ScreenWidth*2/4,d0
-	move.l	Screens+8,d1
-	add.l	#ScreenWidth/8*ScreenHeight*3+ScreenWidth/8*ScreenHeight*2/4,d1
-	move.l	#0,a1
-	move.w	#(blith/2)*64+blitw,d2
-	bsr	Copy
-
-	move.w	#0,d2	; xstart
-	move.w	#0,d3	; ystart
-	move.w	XEnd,d0	; xend
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-
-	move.w	#ADDS*9*3,d2	; xstart
-	move.w	#0,d3	; ystart
-	move.w	#ADDS*9*3,d0	; xend
-	add.w	XEnd,d0
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-
-;----- Render Gouraud
-
-	lea	Masks,a6
-	move.w	#0,d4
-	move.w	#0,d6
-	swap	d6
-	move.w	XEnd,d6
-	swap	d6	
-	move.l	d6,d7
-	add.l	#ADDS+(ADDS<<16),d7
-
-	move.w	#9-1,d5
-
-	move.w	d6,d2	; xstart
-	move.w	#0,d3	; ystart
-	swap	d6
-	move.w	d6,d0	; xend
-	swap	d6
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-
-	move.w	d6,d2	; xstart
-	add.w	#ADDS*9,d2
-	move.w	#0,d3	; ystart
-	swap	d6
-	move.w	d6,d0	; xend
-	add.w	#ADDS*9,d0
-	swap	d6
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-
-	move.w	d6,d2	; xstart
-	add.w	#ADDS*9*2,d2
-	move.w	#0,d3	; ystart
-	swap	d6
-	move.w	d6,d0	; xend
-	add.w	#ADDS*9*2,d0
-	swap	d6
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-RL_l0:	
-	move.w	d7,d2	; xstart
-	move.w	#0,d3	; ystart
-	swap	d7
-	move.w	d7,d0	; xend
-	swap	d7
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-
-	move.w	d7,d2	; xstart
-	add.w	#ADDS*9,d2
-	move.w	#0,d3	; ystart
-	swap	d7
-	move.w	d7,d0	; xend
-	add.w	#ADDS*9,d0
-	swap	d7
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-
-	move.w	d7,d2	; xstart
-	add.w	#ADDS*9*2,d2
-	move.w	#0,d3	; ystart
-	swap	d7
-	move.w	d7,d0	; xend
-	add.w	#ADDS*9*2,d0
-	swap	d7
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-
-	move.l	(a6,d4.w),d0
-	beq.w	RL_n1
-
-	move.l	#LineScreen,d0
-	move.l	#FillScreen,d1
-	bsr	Fill
-
-	move.l	#FillScreen,d0
+	move.l	#%000000000000000,d7
 	move.l	Screens+8,d1
 	add.l	#ScreenWidth/8*ScreenHeight*4,d1
-	move.l	(a6,d4.w),a1
+	bsr	RenderBP
+
+	move.l	#%000000001111101,d7
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*5,d1
+	bsr	RenderBP
+
+;--- render Block
+
+	move.l	#0,d6
+	move.w	d6,d2	; xstart
+	move.w	#0,d3	; ystart
+	swap	d6
+	move.w	d6,d0	; xend
+	swap	d6
+	add.w	XEnd,d0
+	move.w	#SH,d1	; yend
+	move.l	#LineScreen,a5
+	bsr	DRAWLINE
+
+	add.w	#ADDS_T*15,d6
+	swap	d6
+	add.w	#ADDS_D*15,d6
+	swap	d6
+	move.w	d6,d2	; xstart
+	move.w	#0,d3	; ystart
+	swap	d6
+	move.w	d6,d0	; xend
+	swap	d6
+	add.w	XEnd,d0
+	move.w	#SH,d1	; yend
+	move.l	#LineScreen,a5
+	bsr	DRAWLINE
+
+	move.l	#LineScreen,d0
+	move.l	#FillScreen,d1
+	bsr	Fill
+
+	move.l	#FillScreen+ScreenWidth/8*ScreenHeight/4,d0
+	move.l	#ColorPlane1+ScreenWidth/8*ScreenHeight/4,d1
+	move.l	#0,a1
+	move.w	#blith/4*64+blitw,d2
+	bsr	Copy
+
+	move.l	#FillScreen+ScreenWidth/8*ScreenHeight*2/4,d0
+	move.l	#ColorPlane2+ScreenWidth/8*ScreenHeight*2/4,d1
+	move.l	#0,a1
+	move.w	#blith/4*64+blitw,d2
+	bsr	Copy
+
+;--- Addieren
+
+	bsr	Addierer
+	rts
+
+RenderBP:
+	movem.l	d1/d7,-(sp)
+	move.l	d7,d4
+	lsl.l	#1,d4
+	eor.l	d7,d4
+	move.l	#0,d6
+	move.w	#16-1,d5
+RL_l9:	roxr.l	d4
+	bcc.b	RL_no9
+	move.w	d6,d2	; xstart
+	move.w	#0,d3	; ystart
+	swap	d6
+	move.w	d6,d0	; xend
+	swap	d6
+	add.w	XEnd,d0
+	move.w	#SH,d1	; yend
+	move.l	#LineScreen,a5
+	bsr	DRAWLINE
+RL_no9:	add.w	#ADDS_T,d6
+	swap	d6
+	add.w	#ADDS_D,d6
+	swap	d6
+	dbf	d5,RL_l9	
+
+	move.l	#LineScreen,d0
+	move.l	#FillScreen,d1
+	bsr	Fill
+
+	movem.l	(sp)+,d1/d7
+	move.l	#FillScreen,d0
+	move.l	#0,a1
 	move.w	#blith*64+blitw,d2
 	bsr	Copy
 
-RL_n1:
-	cmp.l	#0,d5
-	beq.w	RL_n0
+	move.l	d7,d4
+	lsl.l	#1,d4
+	eor.l	d7,d4
+	move.l	#0,d6
+	move.w	#16-1,d5
+RL_l10:	roxr.l	d4
+	bcc.b	RL_no10
 	move.w	d6,d2	; xstart
 	move.w	#0,d3	; ystart
 	swap	d6
 	move.w	d6,d0	; xend
 	swap	d6
+	add.w	XEnd,d0
 	move.w	#SH,d1	; yend
 	move.l	#LineScreen,a5
 	bsr	DRAWLINE
-
-	move.w	d6,d2	; xstart
-	add.w	#ADDS*9,d2
-	move.w	#0,d3	; ystart
+RL_no10:
+	add.w	#ADDS_T,d6
 	swap	d6
-	move.w	d6,d0	; xend
-	add.w	#ADDS*9,d0
+	add.w	#ADDS_D,d6
 	swap	d6
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-
-	move.w	d6,d2	; xstart
-	add.w	#ADDS*9*2,d2
-	move.w	#0,d3	; ystart
-	swap	d6
-	move.w	d6,d0	; xend
-	add.w	#ADDS*9*2,d0
-	swap	d6
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-RL_n0:
-	add.l	#ADDS+(ADDS<<16),d6
-	add.l	#ADDS+(ADDS<<16),d7
-	add.w	#4,d4
-	dbf	d5,RL_l0
-;------------
-
+	dbf	d5,RL_l10
 	rts
+;--------------------------------------------------------------------	
+;--- addierer
+Addierer:
+; 1.bpl
+	move.l	Screens+8,d0		; a
+	move.l	ColorPlanes+4*4,d1		; b
+	move.l	#CarryScreen1,d2	; c
+	move.l	#CarryScreen2,d3	; d	
+	move.w	#blith*64+blitw,d4
+	bsr	BlAddCarry
 
-;--------------------------------------------------------------------
-RenderBack:
+	move.l	Screens+8,d0		; a
+	move.l	ColorPlanes+4*4,d1		; b
+	move.l	#CarryScreen1,d2	; c
+	move.l	Screens+8,d3		; d	
+	move.w	#blith*64+blitw,d4
+	bsr	BlAdd
+	
+; 2.bpl
+	move.l	Screens+8,d0		; a
+	add.l	#ScreenWidth/8*ScreenHeight,d0
+	move.l	ColorPlanes+4*3,d1		; b
+	move.l	#CarryScreen2,d2	; c
+	move.l	#CarryScreen1,d3	; d	
+	move.w	#blith*64+blitw,d4
+	bsr	BlAddCarry
+
+	move.l	Screens+8,d0		; a
+	add.l	#ScreenWidth/8*ScreenHeight,d0
+	move.l	ColorPlanes+4*3,d1		; b
+	move.l	#CarryScreen2,d2	; c
+	move.l	Screens+8,d3		; d	
+	add.l	#ScreenWidth/8*ScreenHeight,d3
+	move.w	#blith*64+blitw,d4
+	bsr	BlAdd
+	
+; 3.bpl
+	move.l	Screens+8,d0		; a
+	add.l	#ScreenWidth/8*ScreenHeight*2,d0
+	move.l	ColorPlanes+4*2,d1		; b
+	move.l	#CarryScreen1,d2	; c
+	move.l	#CarryScreen2,d3	; d	
+	move.w	#blith*64+blitw,d4
+	bsr	BlAddCarry
+
+	move.l	Screens+8,d0		; a
+	add.l	#ScreenWidth/8*ScreenHeight*2,d0
+	move.l	ColorPlanes+4*2,d1		; b
+	move.l	#CarryScreen1,d2	; c
+	move.l	Screens+8,d3		; d	
+	add.l	#ScreenWidth/8*ScreenHeight*2,d3
+	move.w	#blith*64+blitw,d4
+	bsr	BlAdd
+
+; 4.bpl
+	move.l	Screens+8,d0		; a
+	add.l	#ScreenWidth/8*ScreenHeight*3,d0
+	move.l	ColorPlanes+4*1,d1		; b
+	move.l	#CarryScreen2,d2	; c
+	move.l	#CarryScreen1,d3	; d	
+	move.w	#blith*64+blitw,d4
+	bsr	BlAddCarry
+
+	move.l	Screens+8,d0		; a
+	add.l	#ScreenWidth/8*ScreenHeight*3,d0
+	move.l	ColorPlanes+4*1,d1		; b
+	move.l	#CarryScreen2,d2	; c
+	move.l	Screens+8,d3		; d	
+	add.l	#ScreenWidth/8*ScreenHeight*3,d3
+	move.w	#blith*64+blitw,d4
+	bsr	BlAdd
+
+; 5.bpl
+;	move.l	Screens+8,d0		; a
+;	add.l	#ScreenWidth/8*ScreenHeight*4,d0
+;	move.l	#BitLineEmpty,d1	; b
+;	move.l	#CarryScreen2,d2	; c
+;	move.l	#CarryScreen1,d3	; d	
+;	move.w	#blith*64+blitw,d4
+;	bsr	BlAddCarry
+
+	move.l	Screens+8,d0		; a
+	add.l	#ScreenWidth/8*ScreenHeight*4,d0
+	move.l	ColorPlanes+4*0,d1		; b
+	move.l	#CarryScreen1,d2	; c
+	move.l	Screens+8,d3		; d	
+	add.l	#ScreenWidth/8*ScreenHeight*4,d3
+	move.w	#blith*64+blitw,d4
+	bsr	BlAdd
+
 	rts
 ;--------------------------------------------------------------------
 ClrScr:
@@ -678,6 +588,46 @@ Copy:
 	move.l	#%11101100<<16,d2
 	or.l	#$0f000000,d2
 .Copy0:
+	move.l	d2,-(sp)
+	bsr	SetBlit
+
+	rts
+;--------------------------------------------------------------------
+BlAdd:
+	move.w	d4,-(sp)
+	move.w	#-1,-(sp)
+	move.w	#-1,-(sp)
+	move.l	#-1,-(sp)
+	move.l	d3,-(sp)
+	move.l	d2,-(sp)
+	move.l	d1,-(sp)
+	move.l	d0,-(sp)
+	move.w	#0,-(sp)
+	move.w	#0,-(sp)
+	move.w	#0,-(sp)
+	move.w	#0,-(sp)
+	move.l	#%10010110<<16,d2
+	or.l	#$0f000000,d2
+	move.l	d2,-(sp)
+	bsr	SetBlit
+
+	rts
+;--------------------------------------------------------------------
+BlAddCarry:
+	move.w	d4,-(sp)
+	move.w	#-1,-(sp)
+	move.w	#-1,-(sp)
+	move.l	#-1,-(sp)
+	move.l	d3,-(sp)
+	move.l	d2,-(sp)
+	move.l	d1,-(sp)
+	move.l	d0,-(sp)
+	move.w	#0,-(sp)
+	move.w	#0,-(sp)
+	move.w	#0,-(sp)
+	move.w	#0,-(sp)
+	move.l	#%11101000<<16,d2
+	or.l	#$0f000000,d2
 	move.l	d2,-(sp)
 	bsr	SetBlit
 
@@ -878,7 +828,7 @@ DISPH           equ     ScreenHeight
 ; display window in raster coordinates (HSTART must be odd)
 HSTART          equ     129+(256-ScreenWidth)/2
 VSTART          equ     36
-VEND            equ     VSTART+DISPH
+VEND            equ     VSTART+DISPH+8
 
 ; normal display data fetch start/stop (without scrolling)
 DFETCHSTART     equ     HSTART/2
@@ -944,7 +894,8 @@ ColorCopper1:
 
 	dc.w	$0106,$0000
 	dc.w	$0007+(VSTART<<8),$fffe
-	dc.w	$0100,(Planes<<12)
+;	dc.w	$0100,(Planes<<12)
+	dc.w	$0100,(6<<12)
 ;	dc.w	$0180,$0000
 	dc.w	$0007+((VEND)<<8),$fffe
 	dc.w	$0100,0
@@ -1011,7 +962,8 @@ ColorCopper2:
 
 	dc.w	$0106,$0000
 	dc.w	$0007+(VSTART<<8),$fffe
-	dc.w	$0100,(Planes<<12)
+;	dc.w	$0100,(Planes<<12)
+	dc.w	$0100,(6<<12)
 ;	dc.w	$0180,$0000
 	dc.w	$0007+((VEND)<<8),$fffe
 	dc.w	$0100,0
@@ -1078,40 +1030,34 @@ ColorCopper3:
 
 	dc.w	$0106,$0000
 	dc.w	$0007+(VSTART<<8),$fffe
-	dc.w	$0100,(Planes<<12)
+;	dc.w	$0100,(Planes<<12)
+	dc.w	$0100,(6<<12)
 ;	dc.w	$0180,$0000
 	dc.w	$0007+((VEND)<<8),$fffe
 	dc.w	$0100,0
 	dc.w	$ffff,$fffe
 
-
 *********************************************************************
 	SECTION mem,BSS_C
 Screen1:
-	ds.b	ScreenWidth/8*ScreenHeight*Planes
+	ds.b	ScreenWidth/8*ScreenHeight*6 ;Planes
 Screen2:
-	ds.b	ScreenWidth/8*ScreenHeight*Planes
+	ds.b	ScreenWidth/8*ScreenHeight*6 ;Planes
 Screen3:
-	ds.b	ScreenWidth/8*ScreenHeight*Planes
+	ds.b	ScreenWidth/8*ScreenHeight*6 ;Planes
 LineScreen:
 	ds.b	ScreenWidth/8*ScreenHeight
 FillScreen:
 	ds.b	ScreenWidth/8*ScreenHeight
-Mask0:
+CarryScreen1:
 	ds.b	ScreenWidth/8*ScreenHeight
-Mask1:
+CarryScreen2:
 	ds.b	ScreenWidth/8*ScreenHeight
-Mask2:
+ColorPlane0:
 	ds.b	ScreenWidth/8*ScreenHeight
-Mask3:
+ColorPlane1:
 	ds.b	ScreenWidth/8*ScreenHeight
-Mask4:
-	ds.b	ScreenWidth/8*ScreenHeight
-Mask5:
-	ds.b	ScreenWidth/8*ScreenHeight
-Mask6:
-	ds.b	ScreenWidth/8*ScreenHeight
-Mask7:
+ColorPlane2:
 	ds.b	ScreenWidth/8*ScreenHeight
 ;--------------------------------------------------------------------
 	section	data,DATA_F
@@ -1138,12 +1084,13 @@ BlitListBeg:
 	dc.w	0
 BlitListEnd:
 	dc.w	0,0
+ColorPlanes:
+	dc.l	ColorPlane2,ColorPlane1,ColorPlane2,ColorPlane1,ColorPlane0
 Frames:	dc.w	0
 BEnd:	dc.w	0
 
 XEnd:	dc.w	83
 sinpos	dc.w	0
-Masks:	dc.l	0,Mask0,Mask1,Mask2,Mask3,Mask4,Mask5,Mask6,Mask7
 Sinus:
 	DC.W	$0001,$0002,$0004,$0005,$0007,$0009,$000A,$000C,$000D,$000F
 	DC.W	$0010,$0012,$0014,$0015,$0017,$0018,$001A,$001B,$001D,$001F
@@ -1249,41 +1196,54 @@ Sinus:
 	DC.W	$FFEB,$FFEC,$FFEE,$FFF0,$FFF1,$FFF3,$FFF4,$FFF6,$FFF7,$FFF9
 	DC.W	$FFFB,$FFFC,$FFFE,$FFFF
 
-Palette:
-	dc.w	$0546
-	dc.w	$0222
-	dc.w	$0555
-	dc.w	$0aaa
-	dc.w	$0000
-	dc.w	$0112
-	dc.w	$0225
-	dc.w	$055a
+
+PlaneRen:
 	
-	dc.w	$0000
-	dc.w	$0121
-	dc.w	$0252
-	dc.w	$05a5
-	dc.w	$0000
-	dc.w	$0211
-	dc.w	$0522
-	dc.w	$0a55
+;1	2	%000001
+;3	6	%000010
+;4	8	%000011
+;-	9	%000100
+;5	10	%000101
+;-	11	%000110
+;6	12	%000111
+;-	13	%001000
+;7	14	%001001
+;-	15	%001010
+Palette:
+	dc.w	$0456
+	dc.w	$0221
+	dc.w	$0663
+	dc.w	$0884
+	dc.w	$0995
+	dc.w	$0aa5
+	dc.w	$0bb6
+	dc.w	$0cc6	
+	dc.w	$0dd7
+	dc.w	$0ee7
+	dc.w	$0ff8
+	
+	dc.w	$0122
+	dc.w	$0366
+	dc.w	$0488
+	dc.w	$0599
+	dc.w	$05aa
+	dc.w	$06bb
+	dc.w	$06cc
+	dc.w	$07dd
+	dc.w	$07ee
+	dc.w	$08ff
 
-	dc.w	$0222
-	dc.w	$0555
-	dc.w	$0aaa
-	dc.w	$0eee
-	dc.w	$0112
-	dc.w	$0225
-	dc.w	$055a
-	dc.w	$0aae
+	dc.w	$0212
+	dc.w	$0636
+	dc.w	$0848
+	dc.w	$0959
+	dc.w	$0a5a
+	dc.w	$0b6b
+	dc.w	$0c6c
+	dc.w	$0d7d
+	dc.w	$0e7e
+	dc.w	$0f8f
 
-	dc.w	$0121
-	dc.w	$0252
-	dc.w	$05a5
-	dc.w	$0aea
-	dc.w	$0211
-	dc.w	$0522
-	dc.w	$0a55
 	dc.w	$0eaa
 
 *********************************************************************
