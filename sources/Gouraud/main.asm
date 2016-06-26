@@ -379,6 +379,7 @@ ADDS_D = 0
 	rts
 
 RenderBP:
+	move.l	d1,RL_dst+2
 	movem.l	d1/d7,-(sp)
 	move.l	d7,d4
 	lsl.l	#1,d4
@@ -394,7 +395,7 @@ RL_l9:	roxr.l	d4
 	swap	d6
 	add.w	XEnd,d0
 	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
+RL_dst:	move.l	#LineScreen,a5
 	bsr	DRAWLINE
 RL_no9:	add.w	#ADDS_T,d6
 	swap	d6
@@ -402,38 +403,11 @@ RL_no9:	add.w	#ADDS_T,d6
 	swap	d6
 	dbf	d5,RL_l9	
 
-	move.l	#LineScreen,d0
-	move.l	#FillScreen,d1
+	movem.l	(sp)+,d1/d7
+	move.l	d1,d0
+;	move.l	#FillScreen,d1
 	bsr	Fill
 
-	movem.l	(sp)+,d1/d7
-	move.l	#FillScreen,d0
-	move.l	#0,a1
-	move.w	#blith*64+blitw,d2
-	bsr	Copy
-
-	move.l	d7,d4
-	lsl.l	#1,d4
-	eor.l	d7,d4
-	move.l	#0,d6
-	move.w	#16-1,d5
-RL_l10:	roxr.l	d4
-	bcc.b	RL_no10
-	move.w	d6,d2	; xstart
-	move.w	#0,d3	; ystart
-	swap	d6
-	move.w	d6,d0	; xend
-	swap	d6
-	add.w	XEnd,d0
-	move.w	#SH,d1	; yend
-	move.l	#LineScreen,a5
-	bsr	DRAWLINE
-RL_no10:
-	add.w	#ADDS_T,d6
-	swap	d6
-	add.w	#ADDS_D,d6
-	swap	d6
-	dbf	d5,RL_l10
 	rts
 ;--------------------------------------------------------------------	
 ;--- addierer

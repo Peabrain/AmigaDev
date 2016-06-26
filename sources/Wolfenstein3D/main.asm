@@ -1601,6 +1601,10 @@ StartBlitList:
 	move.w	#1,BEnd
 	lsl.l	#5,d0
 
+.WAIT:
+	BTST	#$6,$2(A6)	; Wait on the blitter
+	BNE.S	.WAIT
+
 	lea	$dff000,a6
 	add.l	d0,a0
 	move.l	(a0),BLTCON0(a6)
