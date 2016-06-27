@@ -26,6 +26,9 @@
 ;14	o	%001001
 ;15	o	%001010
 
+ScreenWidth = 256
+ScreenHeight= 256
+MoreColor = 0
 
 	incdir	data:AmigaDev/sources/
 	include "custom.i"
@@ -144,14 +147,20 @@ mainloop:
 .wframe:
 	btst	#0,$dff005
 	bne.b	.wframe
-	cmp.b	#$2e,$dff006
+	cmp.b	#$4,$dff006
 	bne.b	.wframe
 .wframe2:
-	cmp.b	#$30,$dff006
+	cmp.b	#$5,$dff006
 	bne.b	.wframe2
 ;	move.w	#$004,$dff180
 
 	bsr	BlitWait
+	move.l	Copper+4,$dff080
+	lea	Screens,a0
+	bsr	Switch
+	lea	Copper,a0
+	bsr	Switch
+
 	move.w	BlitListEnd+2,BlitListEnd
 	bsr	StartBlitList
 
@@ -175,13 +184,6 @@ mainloop:
 
 ;	bsr BlitWait
 ;	move.w	#$000,$dff180
-
-	lea	Screens,a0
-	bsr	Switch
-	lea	Copper,a0
-	bsr	Switch
-
-	move.l	Copper,$dff080
 
 	btst	#6,$bfe001
 	bne.w	mainloop
@@ -270,18 +272,6 @@ ADDS_D = 0
 	move.w	#(ScreenHeight)*64+((ScreenWidth/16)&63),d0
 	bsr	ClrScr
 
-	move.l	#CarryScreen1,a1
-	move.w	#(ScreenHeight)*64+((ScreenWidth/16)&63),d0
-	bsr	ClrScr
-
-	move.l	#ColorPlane1,a1
-	move.w	#(ScreenHeight)*64+((ScreenWidth/16)&63),d0
-	bsr	ClrScr
-
-	move.l	#ColorPlane2,a1
-	move.w	#(ScreenHeight)*64+((ScreenWidth/16)&63),d0
-	bsr	ClrScr
-
 ;1	h	%100001
 ;2	o	%000001
 ;3	h	%100010
@@ -330,7 +320,22 @@ ADDS_D = 0
 	add.l	#ScreenWidth/8*ScreenHeight*5,d1
 	bsr	RenderBP
 
+	IFEQ	MoreColor
+	rts
+	ENDC
 ;--- render Block
+
+	move.l	#CarryScreen1,a1
+	move.w	#(ScreenHeight)*64+((ScreenWidth/16)&63),d0
+	bsr	ClrScr
+
+	move.l	#ColorPlane1,a1
+	move.w	#(ScreenHeight)*64+((ScreenWidth/16)&63),d0
+	bsr	ClrScr
+
+	move.l	#ColorPlane2,a1
+	move.w	#(ScreenHeight)*64+((ScreenWidth/16)&63),d0
+	bsr	ClrScr
 
 	move.l	#0,d6
 	move.w	d6,d2	; xstart
@@ -871,8 +876,10 @@ ColorCopper1:
 ;	dc.w	$0100,(Planes<<12)
 	dc.w	$0100,(6<<12)
 ;	dc.w	$0180,$0000
+	IFGT	(256-VEND)
 	dc.w	$0007+((VEND)<<8),$fffe
 	dc.w	$0100,0
+	ENDC
 	dc.w	$ffff,$fffe
 
 ;-----------
@@ -939,8 +946,10 @@ ColorCopper2:
 ;	dc.w	$0100,(Planes<<12)
 	dc.w	$0100,(6<<12)
 ;	dc.w	$0180,$0000
+	IFGT	(256-VEND)
 	dc.w	$0007+((VEND)<<8),$fffe
 	dc.w	$0100,0
+	endc
 	dc.w	$ffff,$fffe
 
 ;-----------
@@ -1007,8 +1016,10 @@ ColorCopper3:
 ;	dc.w	$0100,(Planes<<12)
 	dc.w	$0100,(6<<12)
 ;	dc.w	$0180,$0000
+	IFGT	(256-VEND)
 	dc.w	$0007+((VEND)<<8),$fffe
 	dc.w	$0100,0
+	ENDC
 	dc.w	$ffff,$fffe
 
 *********************************************************************
