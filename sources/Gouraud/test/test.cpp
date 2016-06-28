@@ -8,9 +8,15 @@ typedef struct VEC
 {
 	int	x,y,z;	
 }VEC;
+typedef struct EDGE
+{
+	int a,b;	
+}EDGE;
 typedef	struct POLYGON
 {
-	int	a,b,c,d;	// -1 = means no vector
+	int	vertices[4];	// -1 = means no vector
+	int edges[4];		// -1 = means no edge
+	int Cos;			// Gouraudfactor
 }POLYGON;
 //////////////////////////////////////////////////////
 VEC	VectorsOrg[8] = 
@@ -24,26 +30,42 @@ VEC	VectorsOrg[8] =
 	{ 256,-256, 256},	// 6
 	{-256,-256, 256},	// 7
 };
+EDGE Edges[] =
+{
+	{0,1},	// 0
+	{1,2},	// 1
+	{2,3},	// 2
+	{3,0},	// 3
+	{4,5},	// 4
+	{5,6},	// 5
+	{6,7},	// 6
+	{7,4},	// 7
+	{0,7},	// 8
+	{1,6},	// 9
+	{2,5},	// 10
+	{3,4},	// 11
+};
 POLYGON	Polygons[] = 
 {
-	{0,1,2,3},
-	{1,6,5,2},
-	{6,7,4,5},
-	{7,0,3,4},
-	{7,6,1,0},
-	{3,2,5,4}
+	{{0,1,2,3},{0,1,2,3}},
+	{{1,6,5,2},{9,5,10,1}},
+	{{6,7,4,5},{6,7,4,5}},
+	{{7,0,3,4},{8,3,11,7}},
+	{{7,6,1,0},{6,9,0,8}},
+	{{3,2,5,4},{2,10,4,11}}
 };
 VEC Vectors[8];
 int RotationMatrix[] = 
 {
-	65536,0,0,0,
-	0,65536,0,0,
-	0,0,65536,0,
+	0,0,0,0,
+	0,0,0,0,
+	0,0,0,0,
 };
-int WinkelA = (0) & (SINCOS - 1),WinkelB = (0) & (SINCOS - 1),WinkelC = (0) & (SINCOS - 1);
+int WinkelA = (128) & (SINCOS - 1),WinkelB = (0) & (SINCOS - 1),WinkelC = (0) & (SINCOS - 1);
 //////////////////////////////////////////////////////
 int	Sin[SINCOS];
 int	Cos[SINCOS];
+int EdgeVisible[12];
 //////////////////////////////////////////////////////
 void	Init();
 void	CalculateVectors();
@@ -72,6 +94,7 @@ void	Init()
 		Sin[i] = (int)(sin(PI * 2.0 * (double)i / SINCOS) * 256.0);
 		Cos[i] = (int)(cos(PI * 2.0 * (double)i / SINCOS) * 256.0);
 	}
+	for(int i = 0;i < 12;i++) EdgeVisible[i] = 0;
 }
 //////////////////////////////////////////////////////
 void	CalculateVectors()
@@ -106,17 +129,17 @@ VEC 	Cross(VEC v0,VEC v1)
 bool	IsPolygonVisible(int p,VEC source)
 {
 	VEC v0,v1,v,s;
-	v0.x = Vectors[Polygons[p].a].x - Vectors[Polygons[p].b].x;
-	v0.y = Vectors[Polygons[p].a].y - Vectors[Polygons[p].b].y;
-	v0.z = Vectors[Polygons[p].a].z - Vectors[Polygons[p].b].z;
-	v1.x = Vectors[Polygons[p].c].x - Vectors[Polygons[p].b].x;
-	v1.y = Vectors[Polygons[p].c].y - Vectors[Polygons[p].b].y;
-	v1.z = Vectors[Polygons[p].c].z - Vectors[Polygons[p].b].z;
+	v0.x = Vectors[Polygons[p].vertices[0]].x - Vectors[Polygons[p].vertices[1]].x;
+	v0.y = Vectors[Polygons[p].vertices[0]].y - Vectors[Polygons[p].vertices[1]].y;
+	v0.z = Vectors[Polygons[p].vertices[0]].z - Vectors[Polygons[p].vertices[1]].z;
+	v1.x = Vectors[Polygons[p].vertices[2]].x - Vectors[Polygons[p].vertices[1]].x;
+	v1.y = Vectors[Polygons[p].vertices[2]].y - Vectors[Polygons[p].vertices[1]].y;
+	v1.z = Vectors[Polygons[p].vertices[2]].z - Vectors[Polygons[p].vertices[1]].z;
 	v = Cross(v0,v1);
-	s.x = source.x - Vectors[Polygons[p].b].x;
-	s.y = source.y - Vectors[Polygons[p].b].y;
-	s.z = source.z - Vectors[Polygons[p].b].z;
-	float	dot = Dot(v,s);
+	s.x = source.x - Vectors[Polygons[p].vertices[1]].x;
+	s.y = source.y - Vectors[Polygons[p].vertices[1]].y;
+	s.z = source.z - Vectors[Polygons[p].vertices[1]].z;
+	int	dot = Dot(v,s);
 	if(dot > 1) return true;
 	return false;
 }
@@ -127,8 +150,17 @@ void	CheckPolygonsVisible(VEC source)
 	for(int i = 0;i < sizeof(Polygons)/sizeof(POLYGON);i++)
 	{
 		if(IsPolygonVisible(i,source))
+		{
 			printf("Polygon: %i visible\n",i);
+			for(int j = 0;j < 4;j++)
+				if(Polygons[i].edges[j] != -1)
+					EdgeVisible[Polygons[i].edges[j]]++;
+
+		}
 	}
+	printf("EdgeVisibility:\n");
+	for(int i = 0;i < 12;i++)
+		printf("Edge %i: %i\n",i,EdgeVisible[i]);
 }
 //////////////////////////////////////////////////////
 // cos(a) * cos(b) 			cos(c) * sin(b) + sin(c) * sin(a) * cos(b) 		sin(c) * sin(b) − cos(c) * sin(a) * cos(b)
