@@ -66,11 +66,13 @@ int RotationMatrix[] =
 	0,0,0,0,
 	0,0,0,0,
 };
+//int WinkelX = (-128) & (SINCOS - 1),WinkelY = (0) & (SINCOS - 1),WinkelZ = (128) & (SINCOS - 1);
 int WinkelX = (-128) & (SINCOS - 1),WinkelY = (0) & (SINCOS - 1),WinkelZ = (128) & (SINCOS - 1);
 //////////////////////////////////////////////////////
 int	Sin[SINCOS];
 int	Cos[SINCOS];
 int EdgeVisible[12];
+char	Screen[80*80];
 //////////////////////////////////////////////////////
 void	Init();
 void	CalculateVectors();
@@ -81,6 +83,9 @@ bool	IsPolygonVisible(int p,VEC3 source);
 void	CheckPolygonsVisible(VEC3 source);
 void	CalculateRotationMatrix();
 VEC3 	CalculateVector(VEC3 v);
+void	ClearScreen();
+void	PrintScreen();
+void	DrawLine(int x0,int y0,int x1,int y1,char m);
 //////////////////////////////////////////////////////
 int	main()
 {
@@ -90,6 +95,16 @@ int	main()
 	CalculateVectors();	
 	PrintVectors();
 	CheckPolygonsVisible(source);
+	ClearScreen();
+	for(int i = 0;i < 12;i++)
+	{
+		switch(EdgeVisible[i])
+		{
+			case 1:	DrawLine(Vectors2D[Edges[i].a].x,Vectors2D[Edges[i].a].y,Vectors2D[Edges[i].b].x,Vectors2D[Edges[i].b].y,'1');break;
+			case 2:	DrawLine(Vectors2D[Edges[i].a].x,Vectors2D[Edges[i].a].y,Vectors2D[Edges[i].b].x,Vectors2D[Edges[i].b].y,'2');break;
+		}
+	}
+	PrintScreen();
 }
 //////////////////////////////////////////////////////
 void	Init()
@@ -107,8 +122,8 @@ void	CalculateVectors()
 	for(int i = 0;i < sizeof(VectorsOrg)/sizeof(VEC3);i++)
 	{
 		Vectors[i] = CalculateVector(VectorsOrg[i]);
-		Vectors2D[i].x = (Vectors[i].x * 1024 / Vectors[i].z) / 8;
-		Vectors2D[i].y = (Vectors[i].y * 1024 / Vectors[i].z) / 8;
+		Vectors2D[i].x = (Vectors[i].x * 1024 / Vectors[i].z) / 13;
+		Vectors2D[i].y = (Vectors[i].y * 1024 / Vectors[i].z) / 13;
 	}
 }
 //////////////////////////////////////////////////////
@@ -222,5 +237,55 @@ VEC3 	CalculateVector(VEC3 v)
 	r.y = ((v.x * RotationMatrix[4 * 1 + 0] + v.y * RotationMatrix[4 * 1 + 1] + v.z * RotationMatrix[4 * 1 + 2]) >> 8) + RotationMatrix[4 * 1 + 3];
 	r.z = ((v.x * RotationMatrix[4 * 2 + 0] + v.y * RotationMatrix[4 * 2 + 1] + v.z * RotationMatrix[4 * 2 + 2]) >> 8) + RotationMatrix[4 * 2 + 3];
 	return r;
+}
+//////////////////////////////////////////////////////
+void	ClearScreen()
+{
+	for(int y = 0;y < 80;y++)
+	{
+		for(int x = 0;x < 80;x++)
+			Screen[y*80+x] = ' ';
+		printf("\n");
+	}
+}
+//////////////////////////////////////////////////////
+void	PrintScreen()
+{
+	for(int y = 0;y < 80;y++)
+	{
+		for(int x = 0;x < 80;x++)
+			printf("%c",Screen[y*80+x]);
+		printf("\n");
+	}
+}
+//////////////////////////////////////////////////////
+void	DrawLine(int x0,int y0,int x1,int y1,char m)
+{
+	if(y1 < y0)
+	{
+		int a = y1;
+		y1 = y0;
+		y0 = a;
+		a = x1;
+		x1 = x0;
+		x0 = a;
+	}
+	printf("Draw (%i,%i) to (%i,%i)\n",x0,y0,x1,y1);
+
+	if(!(y1 - y0))
+	{
+		Screen[(y0 + 40) * 80 + 40 + x0] = m;
+		Screen[(y1 + 40) * 80 + 40 + x1] = m;
+	}
+	else
+	{
+		int xadd = (x1 - x0) * 256 / (y1 - y0);
+		int x = ((x0 + 40) << 8) + 127;
+		for(int i = y0 + 40;i < y1 + 40;i++)
+		{
+			Screen[i * 80 + (x >> 8)] = m;
+			x += xadd;
+		}
+	}
 }
 //////////////////////////////////////////////////////
