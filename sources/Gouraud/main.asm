@@ -26,9 +26,9 @@
 ;14	o	%001001
 ;15	o	%001010
 
-ScreenWidth = 256
-ScreenHeight= 256
-MoreColor = 0
+ScreenWidth = 160
+ScreenHeight= 160
+MoreColor = 1
 
 	incdir	data:AmigaDev/sources/
 	include "custom.i"
@@ -320,9 +320,96 @@ ADDS_D = 0
 	add.l	#ScreenWidth/8*ScreenHeight*5,d1
 	bsr	RenderBP
 
+	move.l	#%010101011111011,d7
+	move.l	Screens+8,d1
+	bsr	RenderBP
+
+	move.l	#%100110010101100,d7
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight,d1
+	bsr	RenderBP
+
+	move.l	#%000111100110000,d7
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*2,d1
+	bsr	RenderBP
+
+	move.l	#%111000001000000,d7
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*3,d1
+	bsr	RenderBP
+
+	move.l	#%000000000000000,d7
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*4,d1
+	bsr	RenderBP
+
+	move.l	#%000000001111101,d7
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*5,d1
+	bsr	RenderBP
+
+	move.l	#%010101011111011,d7
+	move.l	Screens+8,d1
+	bsr	RenderBP
+
+	move.l	#%100110010101100,d7
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight,d1
+	bsr	RenderBP
+
+	move.l	#%000111100110000,d7
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*2,d1
+	bsr	RenderBP
+
+	move.l	#%111000001000000,d7
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*3,d1
+	bsr	RenderBP
+
+	move.l	#%000000000000000,d7
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*4,d1
+	bsr	RenderBP
+
+	move.l	#%000000001111101,d7
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*5,d1
+	bsr	RenderBP
+
+;--- fill Screen
+
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*0,d1
+	move.l	d1,d0
+	bsr	Fill
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*1,d1
+	move.l	d1,d0
+	bsr	Fill
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*2,d1
+	move.l	d1,d0
+	bsr	Fill
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*3,d1
+	move.l	d1,d0
+	bsr	Fill
+;	move.l	Screens+8,d1
+;	add.l	#ScreenWidth/8*ScreenHeight*4,d1
+;	move.l	d1,d0
+;	bsr	Fill
+	move.l	Screens+8,d1
+	add.l	#ScreenWidth/8*ScreenHeight*5,d1
+	move.l	d1,d0
+	bsr	Fill
+
+
 	IFEQ	MoreColor
 	rts
 	ENDC
+
 ;--- render Block
 
 	move.l	#CarryScreen1,a1
@@ -409,9 +496,6 @@ RL_no9:	add.w	#ADDS_T,d6
 	dbf	d5,RL_l9	
 
 	movem.l	(sp)+,d1/d7
-	move.l	d1,d0
-;	move.l	#FillScreen,d1
-	bsr	Fill
 
 	rts
 ;--------------------------------------------------------------------	
@@ -779,19 +863,19 @@ DRAW_DONTSETSIGN:
 
 	or.l	#$2,d7
 
-	move.w	d0,-(sp)
-	MOVE.W	#$FFFF,-(sp)
-	MOVE.W	#$8000,-(sp)
-	MOVE.L	#-1,-(sp)
-	move.l	d3,-(sp)
-	move.l	d3,-(sp)
-	move.l	#0,-(sp)
-	move.l	d5,-(sp)
-	move.w	#0,-(sp)
-	move.w	#ScreenWidth/8,-(sp)
-	move.w	d1,-(sp)
-	move.w	d2,-(sp)
-	move.l	d7,-(sp)
+	move.w	d0,-(sp)	; BLTSIZE
+	MOVE.W	#$FFFF,-(sp)	; BLTBDAT
+	MOVE.W	#$8000,-(sp); BLTADAT
+	MOVE.L	#-1,-(sp)	; BLTAFWM
+	move.l	d3,-(sp)	; BLTDPTH
+	move.l	d3,-(sp)	; BLTCPTH
+	move.l	#0,-(sp)	; BLTBPTH
+	move.l	d5,-(sp)	; BLTAPTH
+	move.w	#0,-(sp)	; BLTDMOD
+	move.w	#ScreenWidth/8,-(sp)	; BLTCMOD
+	move.w	d1,-(sp)	; BLTBMOD
+	move.w	d2,-(sp)	; BLTAMOD
+	move.l	d7,-(sp)	; BLTCON0
 
 	bsr	SetBlit
 
