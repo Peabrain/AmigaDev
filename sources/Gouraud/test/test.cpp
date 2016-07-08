@@ -20,6 +20,8 @@ typedef	struct POLYGON
 {
 	int	vertices[4];	// -1 = means no vector
 	int edges[4];		// -1 = means no edge
+	VEC3 normal;
+	VEC3 normalCalced;
 	int visible;
 }POLYGON;
 typedef struct VEC2COL
@@ -67,12 +69,12 @@ EDGE Edges[] =
 };
 POLYGON	Polygons[] = 
 {
-	{{0,1,2,3},{0,1,2,3},0},
-	{{1,6,5,2},{9,5,10,1},0},
-	{{6,7,4,5},{6,7,4,5},0},
-	{{7,0,3,4},{8,3,11,7},0},
-	{{7,6,1,0},{6,9,0,8},0},
-	{{3,2,5,4},{2,10,4,11},0}
+	{{0,1,2,3},{0,1,2,3},{0,0,-256},0},
+	{{1,6,5,2},{9,5,10,1},{256,0,0},0},
+	{{6,7,4,5},{6,7,4,5},{0,0,256},0},
+	{{7,0,3,4},{8,3,11,7},{-256,0,0},0},
+	{{7,6,1,0},{6,9,0,8},{0,-256,0},0},
+	{{3,2,5,4},{2,10,4,11},{0,256,0},0}
 };
 VEC3 Vectors[8];
 VEC3 Normals[8];
@@ -86,18 +88,22 @@ int RotationMatrix[] =
 };
 //int WinkelX = (-128) & (SINCOS - 1),WinkelY = (0) & (SINCOS - 1),WinkelZ = (128) & (SINCOS - 1);
 int WinkelX = (-128) & (SINCOS - 1),WinkelY = (32) & (SINCOS - 1),WinkelZ = (-144) & (SINCOS - 1);
-#define SHADEFACTOR 5
+// Problemfall !!!
+//int WinkelX = (-0) & (SINCOS - 1),WinkelY = (0) & (SINCOS - 1),WinkelZ = (-0) & (SINCOS - 1);
+#define SHADEFACTOR 10
 //////////////////////////////////////////////////////
 int	Sin[SINCOS];
 int	Cos[SINCOS];
 int ACos[256*2];
 int EdgeVisible[12];
 char	Screen[80*80];
+char	Screen2[80*80];
 //VEC2COL vTop;
 int Top = 40;
 int Bottom = -40;
 int Left = 40;
 int Right = -40;
+int RightY = 0;
 int EdgesCalced[12];
 int EdgesCalcedLast[12];
 VEC2COL Vec2Col[1024];
@@ -120,8 +126,9 @@ void	PrintScreen();
 void	GetBound(VEC2 &v0,VEC2 &v1,int Bound_v0,int Bound_v1);
 VEC2 	Cut(VEC2 v0,VEC2 v1,int check,int check_first);
 VEC2 	GetBoundVec(VEC2 v0,VEC2 v1);
-void	DrawLine(int x0,int y0,int x1,int y1,char m);
-void	DrawLineC(int x0,int y0,int x1,int y1,int aNorm,int bNorm);
+void	DrawLine(char * Screen,int x0,int y0,int x1,int y1,char m);
+void	DrawLineEor(char * Screen,int x0,int y0,int x1,int y1,char m);
+void	DrawLineC(char * Screen,int x0,int y0,int x1,int y1,int aNorm,int bNorm);
 //////////////////////////////////////////////////////
 int	main()
 {
@@ -129,6 +136,27 @@ int	main()
 	VEC3 source = {0,0,0};
 	int RightSideEdgeBits = 0;
 	Init();
+
+//	while(1)
+//	{
+
+	for(int i = 0;i < 80 * 80;i ++)
+	{
+		Screen[i] = 0;
+		Screen2[i] = 0;
+	}
+	for(int i = 0;i < 12;i++) 
+	{
+		EdgeVisible[i] = 0;
+	}
+
+	Top = 40;
+	Bottom = -40;
+	Left = 40;
+	Right = -40;
+	RightY = 0;
+	Vec2ColCount = 0;
+
 	CalculateRotationMatrix();
 	CalculateVectors();	
 	CalculateNormals();	
@@ -143,7 +171,10 @@ int	main()
 			Left = Vectors2D[i].x;
 		else
 		if(Vectors2D[i].x > Right)
+		{
 			Right = Vectors2D[i].x;
+			RightY = Vectors2D[i].y;
+		}
 		if(Vectors2D[i].y < Top)
 		{
 			Top = Vectors2D[i].y;
@@ -228,7 +259,6 @@ int	main()
 					e0 = e1;
 					iedge = j;
 				}
-//				DrawLine(Vectors2D[e0.a].x,Vectors2D[e0.a].y,Vectors2D[e0.b].x,Vectors2D[e0.b].y,1);
 
 				RightSideEdgeBits |= 1 << iedge;
 				int k = 0;
@@ -256,7 +286,6 @@ int	main()
 						if(Vectors[e1.b].y > Vectors[e1.a].y)
 						{
 							e0 = e1;
-//							DrawLine(Vectors2D[e0.a].x,Vectors2D[e0.a].y,Vectors2D[e0.b].x,Vectors2D[e0.b].y,2);
 							RightSideEdgeBits |= 1 << k;
 						}
 					}
@@ -268,30 +297,36 @@ int	main()
 		}
 	}
 
-/*	int count2 =
-	for(int i = 0;i < 12;i++)
-	{
-		if(EdgeVisible[i] == 2) 
-		{
-			c2EdgedTab[count2] = i;
-			count2++;
-		}
-	}
-	if(count2 == 3)
-*/		
-//	Screen[(Top.y + 40) * 80 + 40 + Top.x] = v0.c + 'A' - 'a';
-
 	CalculateEdgeSplit();
 
 	printf("Split: %i\n",Vec2ColCount);
 
+	int PolSort[3];
+	int PolySortCount = 0;
 	for(int j = 0;j < 6;j++)
 	{
 		if(!Polygons[j].visible) continue;
+		PolSort[PolySortCount++] = j;
+	}
+	for(int i = 0;i < PolySortCount - 1;i++)
+		for(int j = i;j < PolySortCount;j++)
+			if(Polygons[PolSort[i]].normalCalced.x < Polygons[PolSort[j]].normalCalced.x)
+			{
+				int k = PolSort[i];
+				PolSort[i] = PolSort[j];
+				PolSort[j] = k;
+			}
+
+	for(int k = 0;k < PolySortCount;k++)
+	{
+		int j = PolSort[k];
 		// sorting
 		int sorted[256];
 		int sortedCount = 0;
 		int t = 0;
+		char coloradd = 0;
+		if(Polygons[j].normalCalced.x < 0)
+			coloradd = -1;
 		for(int e = 0;e < 4;e++)
 		{
 			int i = Polygons[j].edges[e];
@@ -299,12 +334,8 @@ int	main()
 			int myVec2ColLast = EdgesCalcedLast[i];
 			if(RightSideEdgeBits & (1 << i))
 			{
-				t = 1;
-				if(t == 1)
-				{
-					for(int m = myVec2Col;m < myVec2ColLast;m++)
-						Screen[(Vec2Col[m].v.y + 40) * 80 + 40 + Right + 1] = Vec2Col[m].c;
-				}
+				for(int m = myVec2Col;m < myVec2ColLast;m++)
+					Screen[(Vec2Col[m].v.y + 40) * 80 + 40 + Right + 3] = Vec2Col[m].c;// + coloradd;
 			}
 			for(int m = myVec2Col;m < myVec2ColLast;m++) sorted[sortedCount++] = m;
 		}
@@ -318,97 +349,102 @@ int	main()
 				}
 		//////////
 
-
 		for(int e = 0;e < sortedCount - 1;e += 2)
 		{
 			VEC2COL v0 = Vec2Col[sorted[e]];
 			VEC2COL v1 = Vec2Col[sorted[e + 1]];
 			if(v0.c == v1.c)
-				DrawLine(v0.v.x,v0.v.y,v1.v.x,v1.v.y,v0.c);//^(v0.c-1));
+				DrawLine(Screen,v0.v.x,v0.v.y,v1.v.x,v1.v.y,v0.c + coloradd);//^(v0.c-1));
 		}
 	}
-/*	for(int i = 0;i < Vec2ColCount;i++)
+	char a = 0;
+	int last = -1;
+	int lastchar = 0;
+	printf("TopRight %i,%i\n", Top,RightY);
+	for(int i = Top + 40;i < RightY + 40;i++)
 	{
-		VEC2COL v = Vec2Col[i];
-		Screen[(v.v.y + 40) * 80 + 40 + v.v.x] = v.c + 'A' - 'a';
+		char b = Screen[i * 80 + 40 + Right + 3];
+		if(b != 0) 
+		{
+			if(last == -1)
+			{
+				last = i;
+				lastchar = b;
+			}
+			a = b;
+		}
+		Screen[i * 80 + 40 + Right + 3] = a;
 	}
-*/
-
+	lastchar--;
+	for(int i = Top + 40;i < last;i++)
+	{
+		Screen[i * 80 + 40 + Right + 3] = lastchar;
+	}
+	printf("BottomRight %i,%i\n", Bottom,RightY);
+	a = 0;
+	last = -1;
+	lastchar = 0;
+	for(int i = Bottom + 40;i >= RightY + 40;i--)
+	{
+		char b = Screen[i * 80 + 40 + Right + 3];
+		if(b != 0) 
+		{
+			if(last == -1)
+			{
+				last = i;
+				lastchar = b;
+			}
+			a = b;
+		}
+		Screen[i * 80 + 40 + Right + 3] = a;
+	}
+	lastchar--;
+	for(int i = last;i < Bottom + 40;i++)
+	{
+		Screen[i * 80 + 40 + Right + 3] = lastchar;
+	}
 /**/
-/*	int count2 = 0;
-	int c2EdgedTab[3];
+	for(int y = Top + 40;y < Bottom + 40;y++)
+	{
+		char a = 0;
+		for(int x = Right + 40 + 3;x >= Left + 40;x--)
+		{
+			char b = Screen[y * 80 + x];
+			if(b != 0) a = b;
+			Screen[y * 80 + x] = a;
+		}
+	}
+/**/
 	for(int i = 0;i < 12;i++)
 	{
-		if(EdgeVisible[i] == 2) 
+		if(EdgeVisible[i] == 1)
 		{
-			c2EdgedTab[count2] = i;
-			count2++;
-		}
-	}
-
-	if(count2 == 3)
-	{
-		struct VEC2COL
-		{
-			VEC2 v;
-			int col;
-		};
-		VEC2COL vc[64];
-		int vcCount = 0;
-//		DrawLine(v0.x,v0.y,v1.x,v1.y,1);
-
-		VEC2 points[16 * 3];
-		int normals[16 * 3];
-
-		int tmp[8];
-		for(int i = 0;i < 8;i++) tmp[i] = 0;
-
-		for(int i = 0;i < count2;i++)
-		{
-			int edge = c2EdgedTab[i];
-			int a = Edges[edge].a;
-			int b = Edges[edge].b;
-			tmp[a]++;
-			tmp[b]++;
-		}
-		int pointIdx = -1;
-		for(int i = 0;i < 8;i++)
-			if(tmp[i] == 3)
-			{
-				pointIdx = i;
-				break;
-			}
-
-		for(int i = 0;i < count2;i++)
-		{
-			int edge = c2EdgedTab[i];
-			int a = Edges[edge].a;
-			int b = Edges[edge].b;
-			if(b == pointIdx)
+			int a = Edges[i].a;
+			int b = Edges[i].b;
+			if(Vectors2D[b].y < Vectors2D[a].y)
 			{
 				int z = b;
 				b = a;
 				a = z;
 			}
-			int aNorm = -Normals[a].z;
-			int bNorm = -Normals[b].z;
-			aNorm = ACos[aNorm + 256];
-			bNorm = ACos[bNorm + 256];
-
-			int _aNorm = (aNorm * 5);
-			int _bNorm = (bNorm * 5);
-
-
-			VEC2 v0 = Vectors2D[a],v1 = Vectors2D[b];
-//			GetBound(v0,v1,1,1);
-
-
-
-			DrawLineC(Vectors2D[a].x,Vectors2D[a].y,Vectors2D[b].x,Vectors2D[b].y,aNorm,bNorm);
+			DrawLineEor(Screen2,Vectors2D[a].x,Vectors2D[a].y,Vectors2D[b].x,Vectors2D[b].y,1);
 		}
 	}
-*/
+
+	for(int y = Top + 40;y < Bottom + 40;y++)
+	{
+		char a = 0;
+		for(int x = Right + 40 + 3;x >= Left + 40;x--)
+		{
+			char a = a ^ Screen2[y * 80 + x];
+			if(a == 0)
+				Screen[y * 80 + x] = 0;
+		}
+	}
+
+/**/
 	PrintScreen();
+//	}
 }
 //////////////////////////////////////////////////////
 void	Init()
@@ -476,13 +512,16 @@ VEC3 	Cross(VEC3 v0,VEC3 v1)
 int	IsPolygonVisible(int p,VEC3 source)
 {
 	VEC3 v0,v1,v,s;
-	v0.x = Vectors[Polygons[p].vertices[0]].x - Vectors[Polygons[p].vertices[1]].x;
+	Polygons[p].normalCalced = CalculateNormal(Polygons[p].normal);
+/*	v0.x = Vectors[Polygons[p].vertices[0]].x - Vectors[Polygons[p].vertices[1]].x;
 	v0.y = Vectors[Polygons[p].vertices[0]].y - Vectors[Polygons[p].vertices[1]].y;
 	v0.z = Vectors[Polygons[p].vertices[0]].z - Vectors[Polygons[p].vertices[1]].z;
 	v1.x = Vectors[Polygons[p].vertices[2]].x - Vectors[Polygons[p].vertices[1]].x;
 	v1.y = Vectors[Polygons[p].vertices[2]].y - Vectors[Polygons[p].vertices[1]].y;
 	v1.z = Vectors[Polygons[p].vertices[2]].z - Vectors[Polygons[p].vertices[1]].z;
 	v = Cross(v0,v1);
+*/
+	v = Polygons[p].normalCalced;
 	s.x = source.x - Vectors[Polygons[p].vertices[1]].x;
 	s.y = source.y - Vectors[Polygons[p].vertices[1]].y;
 	s.z = source.z - Vectors[Polygons[p].vertices[1]].z;
@@ -594,7 +633,7 @@ void	PrintScreen()
 	}
 }
 //////////////////////////////////////////////////////
-void	DrawLine(int x0,int y0,int x1,int y1,char m)
+void	DrawLine(char * Screen,int x0,int y0,int x1,int y1,char m)
 {
 	if(y1 < y0)
 	{
@@ -609,8 +648,37 @@ void	DrawLine(int x0,int y0,int x1,int y1,char m)
 
 	if(!(y1 - y0))
 	{
-		Screen[(y0 + 40) * 80 + 40 + x0] = Screen[y0 * 80 + (x0 >> 8)] ^= m;
-		Screen[(y1 + 40) * 80 + 40 + x1] = Screen[y0 * 80 + (x0 >> 8)] ^= m;
+		Screen[(y0 + 40) * 80 + 40 + x0] = m;//Screen[y0 * 80 + (x0 >> 8)] = m;
+		Screen[(y1 + 40) * 80 + 40 + x1] = m;//Screen[y0 * 80 + (x0 >> 8)] = m;
+	}
+	else
+	{
+		int xadd = (x1 - x0) * 256 / (y1 - y0);
+		int x = ((x0 + 40) << 8) + 127;
+		for(int i = y0 + 40;i <= y1 + 40;i++,x += xadd)
+		{
+			Screen[i * 80 + (x >> 8)] = m;
+		}
+	}
+}
+//////////////////////////////////////////////////////
+void	DrawLineEor(char * Screen,int x0,int y0,int x1,int y1,char m)
+{
+	if(y1 < y0)
+	{
+		int a = y1;
+		y1 = y0;
+		y0 = a;
+		a = x1;
+		x1 = x0;
+		x0 = a;
+	}
+	printf("Draw (%i,%i) to (%i,%i), %i\n",x0,y0,x1,y1,m);
+
+	if(!(y1 - y0))
+	{
+		Screen[(y0 + 40) * 80 + 40 + x0] ^= m;
+		Screen[(y1 + 40) * 80 + 40 + x1] ^= m;
 	}
 	else
 	{
@@ -623,7 +691,7 @@ void	DrawLine(int x0,int y0,int x1,int y1,char m)
 	}
 }
 //////////////////////////////////////////////////////
-void	DrawLineC(int x0,int y0,int x1,int y1,int aNorm,int bNorm)
+void	DrawLineC(char * Screen,int x0,int y0,int x1,int y1,int aNorm,int bNorm)
 {
 	if(y1 < y0)
 	{

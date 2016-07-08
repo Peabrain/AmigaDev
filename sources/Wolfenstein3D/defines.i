@@ -1,4 +1,4 @@
-ScreenWidth = 192
+ScreenWidth = 224
 ScreenHeight= 192
 CutLow      = 33
 Planes	    = 2

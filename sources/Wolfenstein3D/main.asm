@@ -1654,7 +1654,7 @@ DISPH           equ     ScreenHeight-CutLow
 
 ; display window in raster coordinates (HSTART must be odd)
 HSTART          equ     129+(256-ScreenWidth)/2
-VSTART          equ     36+16
+VSTART          equ     36+48
 VEND            equ     VSTART+DISPH
 
 ; normal display data fetch start/stop (without scrolling)
