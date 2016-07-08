@@ -107,7 +107,7 @@ int ColorTable[16] =
 };
 //int WinkelX = (-128) & (SINCOS - 1),WinkelY = (0) & (SINCOS - 1),WinkelZ = (0) & (SINCOS - 1);
 //int WinkelX = (-128) & (SINCOS - 1),WinkelY = (-32) & (SINCOS - 1),WinkelZ = (-64) & (SINCOS - 1);
-int WinkelX = (-128) & (SINCOS - 1),WinkelY = (-16) & (SINCOS - 1),WinkelZ = (64) & (SINCOS - 1);
+int WinkelX = (-128) & (SINCOS - 1),WinkelY = (-32) & (SINCOS - 1),WinkelZ = (64) & (SINCOS - 1);
 #define SHADEFACTOR 9
 //////////////////////////////////////////////////////
 int	Sin[SINCOS];
