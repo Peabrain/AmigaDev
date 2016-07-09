@@ -26,8 +26,8 @@
 ;14	o	%001001
 ;15	o	%001010
 
-ScreenWidth = 160
-ScreenHeight= 160
+ScreenWidth = 192
+ScreenHeight= 192
 MoreColor = 1
 
 	incdir	data:AmigaDev/sources/
@@ -310,10 +310,10 @@ ADDS_D = 0
 	add.l	#ScreenWidth/8*ScreenHeight*3,d1
 	bsr	RenderBP
 
-	move.l	#%000000000000000,d7
-	move.l	Screens+8,d1
-	add.l	#ScreenWidth/8*ScreenHeight*4,d1
-	bsr	RenderBP
+;	move.l	#%000000000000000,d7
+;	move.l	Screens+8,d1
+;	add.l	#ScreenWidth/8*ScreenHeight*4,d1
+;	bsr	RenderBP
 
 	move.l	#%000000001111101,d7
 	move.l	Screens+8,d1
@@ -339,10 +339,10 @@ ADDS_D = 0
 	add.l	#ScreenWidth/8*ScreenHeight*3,d1
 	bsr	RenderBP
 
-	move.l	#%000000000000000,d7
-	move.l	Screens+8,d1
-	add.l	#ScreenWidth/8*ScreenHeight*4,d1
-	bsr	RenderBP
+;	move.l	#%000000000000000,d7
+;	move.l	Screens+8,d1
+;	add.l	#ScreenWidth/8*ScreenHeight*4,d1
+;	bsr	RenderBP
 
 	move.l	#%000000001111101,d7
 	move.l	Screens+8,d1
@@ -368,10 +368,10 @@ ADDS_D = 0
 	add.l	#ScreenWidth/8*ScreenHeight*3,d1
 	bsr	RenderBP
 
-	move.l	#%000000000000000,d7
-	move.l	Screens+8,d1
-	add.l	#ScreenWidth/8*ScreenHeight*4,d1
-	bsr	RenderBP
+;	move.l	#%000000000000000,d7
+;	move.l	Screens+8,d1
+;	add.l	#ScreenWidth/8*ScreenHeight*4,d1
+;	bsr	RenderBP
 
 	move.l	#%000000001111101,d7
 	move.l	Screens+8,d1

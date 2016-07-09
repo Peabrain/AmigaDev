@@ -1,4 +1,5 @@
 #include	<stdio.h>
+#include 	<stdlib.h>
 #include	<math.h>
 //////////////////////////////////////////////////////
 #define	PI 3.141592653589793
@@ -28,6 +29,7 @@ typedef struct VEC2COL
 {
 	VEC2 v;
 	int c;
+	int edgeside;
 }VEC2COL;
 //////////////////////////////////////////////////////
 VEC3	VectorsOrg[8] = 
@@ -107,20 +109,23 @@ int ColorTable[16] =
 };
 //int WinkelX = (-128) & (SINCOS - 1),WinkelY = (0) & (SINCOS - 1),WinkelZ = (0) & (SINCOS - 1);
 //int WinkelX = (-128) & (SINCOS - 1),WinkelY = (-32) & (SINCOS - 1),WinkelZ = (-64) & (SINCOS - 1);
-int WinkelX = (-128) & (SINCOS - 1),WinkelY = (-32) & (SINCOS - 1),WinkelZ = (64) & (SINCOS - 1);
+//int WinkelX = (-128) & (SINCOS - 1),WinkelY = (-64) & (SINCOS - 1),WinkelZ = (0) & (SINCOS - 1);
+int WinkelX = (-200) & (SINCOS - 1),WinkelY = (200) & (SINCOS - 1),WinkelZ = (200) & (SINCOS - 1);
 #define SHADEFACTOR 9
 //////////////////////////////////////////////////////
+#define SCREEN_W 80
+#define SCREEN_H 80
 int	Sin[SINCOS];
 int	Cos[SINCOS];
 int ACos[256*2];
 int EdgeVisible[12];
-char	Screen[80*80];
-char	Screen2[80*80];
+char	Screen[SCREEN_H * SCREEN_W];
+char	Screen2[SCREEN_H * SCREEN_W];
 //VEC2COL vTop;
-int Top = 40;
-int Bottom = -40;
-int Left = 40;
-int Right = -40;
+int Top = SCREEN_H / 2;
+int Bottom = -SCREEN_H / 2;
+int Left = SCREEN_W;
+int Right = -SCREEN_W / 2;
 int RightY = 0;
 int EdgesCalced[12];
 int EdgesCalcedLast[12];
@@ -139,6 +144,10 @@ void	CalculateRotationMatrix();
 VEC3 	CalculateVector(VEC3 v);
 VEC3 	CalculateNormal(VEC3 v);
 void 	CalculateEdgeSplit();
+int 	CalculateRightEdges(int MostTop);
+void 	FinalMasking();
+void 	PrepareBorder();
+void 	FillScreen();
 void	ClearScreen();
 void	PrintScreen();
 //void	GetBound(VEC2 &v0,VEC2 &v1,int Bound_v0,int Bound_v1);
@@ -148,30 +157,33 @@ void	DrawLine(char * Screen,int x0,int y0,int x1,int y1,char m);
 void	DrawLineEor(char * Screen,int x0,int y0,int x1,int y1,char m);
 void	DrawLineC(char * Screen,int x0,int y0,int x1,int y1,int aNorm,int bNorm);
 //////////////////////////////////////////////////////
-int	main()
+#define COLORED
+//////////////////////////////////////////////////////
+int	main(int argv,char **argc)
 {
-	int MostTop = -1;
-	VEC3 source = {0,0,0};
-	int RightSideEdgeBits = 0;
 	Init();
 
+	if(argv == 4)
+	{
+		WinkelX = atoi(argc[1]) & (SINCOS - 1);
+		WinkelY = atoi(argc[2]) & (SINCOS - 1);
+		WinkelZ = atoi(argc[3]) & (SINCOS - 1);
+	}
 //	while(1)
 //	{
 
-	for(int i = 0;i < 80 * 80;i ++)
-	{
-		Screen[i] = 0;
-		Screen2[i] = 0;
-	}
+	int MostTop = -1;
+	VEC3 source = {0,0,0};
+	int RightSideEdgeBits = 0;
 	for(int i = 0;i < 12;i++) 
 	{
 		EdgeVisible[i] = 0;
 	}
 
-	Top = 40;
-	Bottom = -40;
-	Left = 40;
-	Right = -40;
+	Top = SCREEN_H / 2;
+	Bottom = -SCREEN_H / 2;
+	Left = SCREEN_W;
+	Right = -SCREEN_W / 2;
 	RightY = 0;
 	Vec2ColCount = 0;
 
@@ -187,7 +199,6 @@ int	main()
 	{
 		if(Vectors2D[i].x < Left)
 			Left = Vectors2D[i].x;
-		else
 		if(Vectors2D[i].x > Right)
 		{
 			Right = Vectors2D[i].x;
@@ -198,89 +209,12 @@ int	main()
 			Top = Vectors2D[i].y;
 			MostTop = i;
 		}
-		else
 		if(Vectors2D[i].y > Bottom)
 			Bottom = Vectors2D[i].y;
 	}
-
 	printf("Top: %i, Bottom: %i, Left: %i, Right: %i\n",Top,Bottom,Left,Right);
 
-	for(int i = 0;i < 12;i++)
-	{
-		if(EdgeVisible[i] == 1)
-		{
-			if(Edges[i].a == MostTop || Edges[i].b == MostTop)
-			{
-				EDGE e1;
-				EDGE e0 = Edges[i];
-				if(e0.b == MostTop)
-				{
-					int a = e0.a;
-					e0.a = e0.b;
-					e0.b = a;
-				}
-				int j = 0;
-				for(j = i + 1;j < 12;j++)
-				{
-					if(EdgeVisible[j] == 1)
-					{
-						if(Edges[j].a == MostTop || Edges[j].b == MostTop)
-						{
-							e1 = Edges[j];
-							if(e1.b == MostTop)
-							{
-								int a = e1.a;
-								e1.a = e1.b;
-								e1.b = a;
-							}
-							break;
-						}
-					}
-				}
-				int iedge = i;
-				if(Vectors2D[e1.b].x > Vectors2D[e0.b].x) 
-				{
-					e0 = e1;
-					iedge = j;
-				}
-
-				RightSideEdgeBits |= 1 << iedge;
-				int k = 0;
-				for(int l = 0;l < 4;l++)
-				{
-					for(k = 0;k < 12;k++)
-					{
-						if((RightSideEdgeBits & (1 << k)) == 0 && EdgeVisible[k] == 1)
-						{
-							if(Edges[k].a == e0.b || Edges[k].b == e0.b)
-							{
-								e1 = Edges[k];
-								if(e1.b == e0.b)
-								{
-									int z = e1.a;
-									e1.a = e1.b;
-									e1.b = z;
-								}
-								break;
-							}
-						}
-					}
-					if(k < 12)
-					{
-						if(Vectors[e1.b].y > Vectors[e1.a].y)
-						{
-							e0 = e1;
-							RightSideEdgeBits |= 1 << k;
-						}
-					}
-					else
-						break;
-				}
-				break;
-			}
-		}
-	}
-
+	RightSideEdgeBits = CalculateRightEdges(MostTop);
 	CalculateEdgeSplit();
 
 	printf("Split: %i\n",Vec2ColCount);
@@ -305,6 +239,8 @@ int	main()
 		}
 	}
 
+	int myTopY = SCREEN_H;
+	char myTopC = 0;
 	for(int k = 0;k < PolySortCount;k++)
 	{
 		int j = PolSort[k];
@@ -316,8 +252,8 @@ int	main()
 		char coloradd2 = 0;
 		if(Polygons[j].normalCalced.x <= 0)
 			coloradd = -1;
-		if(Polygons[j].normalCalced.y > 0 || coloradd == -1)
-			coloradd2 = -1;
+//		if(Polygons[j].normalCalced.y > 0)// || coloradd == -1)
+//			coloradd2 = -1;
 		for(int e = 0;e < 4;e++)
 		{
 			int i = Polygons[j].edges[e];
@@ -326,8 +262,45 @@ int	main()
 			if(RightSideEdgeBits & (1 << i))
 			{
 				printf("RightEdge %i from %i to %i\n",i,myVec2Col,myVec2ColLast);
-				for(int m = myVec2Col;m < myVec2ColLast;m++)
-					Screen[(Vec2Col[m].v.y + 40) * 80 + 40 + Right + 3] = Vec2Col[m].c + coloradd2;
+				VEC2 v0 = Vectors2D[Edges[i].a];
+				VEC2 v1 = Vectors2D[Edges[i].b];
+				if(v1.y < v0.y)
+				{
+					VEC2 v = v0;
+					v0 = v1;
+					v1 = v;
+				}
+				v1.x = -(v1.y - v0.y);
+				v1.y = (v1.x - v0.x);
+
+				int nx = Polygons[j].normalCalced.x;
+				int ny = Polygons[j].normalCalced.y;
+
+				coloradd2 = 0;
+				int d = 0;
+				if(nx > 0) 
+				{
+					d = ny * v1.y + nx * v1.x;
+//					if(d < 0) coloradd2 = -1;
+				}
+				else
+				{
+					d = -ny * v1.y + nx * v1.x;
+					if(d < 0) coloradd2 = 1;
+				}
+				printf("d %i (%i), %i\n",d,coloradd2,nx);
+/**/				for(int m = myVec2Col;m < myVec2ColLast;m++)
+				{
+					Vec2Col[m].edgeside = 1;
+					int y = (Vec2Col[m].v.y + SCREEN_H / 2);
+					int c = Vec2Col[m].c;
+//					Screen[y * SCREEN_W + SCREEN_W / 2 + Right + 1] = c + coloradd2 + coloradd;
+					if(myTopY > y)
+					{
+						myTopY = y;
+						myTopC = c;
+					}
+				}
 			}
 			for(int m = myVec2Col;m < myVec2ColLast;m++) sorted[sortedCount++] = m;
 		}
@@ -344,105 +317,37 @@ int	main()
 			}
 		}
 		//////////
-
 		printf("sortedC %i\n",sortedCount);
 		for(int e = 0;e < sortedCount - 1;e += 2)
 		{
 			VEC2COL v0 = Vec2Col[sorted[e]];
 			VEC2COL v1 = Vec2Col[sorted[e + 1]];
 			if(v0.c == v1.c)
+			{
+//				coloradd = 0;
+//				if(v0.edgeside == 0 && v1.edgeside == 0) coloradd = -1;
+				if(v1.v.y < v0.v.y)
+				{
+					VEC2COL a = v0;
+					v0 = v1;
+					v1 = a;
+				}
 				DrawLine(Screen,v0.v.x,v0.v.y,v1.v.x,v1.v.y,v0.c + coloradd);//^(v0.c-1));
-		}
-	}
-	char a = 0;
-	int last = -1;
-	int lastchar = 0;
-	printf("TopRight %i,%i\n", Top,RightY);
-//	for(int i = Top + 40;i < RightY + 40;i++)
-	for(int i = Top + 40;i < Bottom + 40;i++)
-	{
-		char b = Screen[i * 80 + 40 + Right + 3];
-		if(b != 0) 
-		{
-			if(last == -1)
-			{
-				last = i;
-				lastchar = b;
+				if(v0.edgeside == 1)
+					Screen[(v0.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = v0.c + coloradd - 1;
+//				else
+				if(v1.edgeside == 1)
+					Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = v1.c + coloradd;
+					
 			}
-			a = b;
-		}
-		Screen[i * 80 + 40 + Right + 3] = a;
-	}
-/*	lastchar--;
-	for(int i = Top + 40;i < last;i++)
-	{
-		Screen[i * 80 + 40 + Right + 3] = lastchar;
-	}
-/**/
-/*	printf("BottomRight %i,%i\n", Bottom,RightY);
-	a = 0;
-	last = -1;
-	lastchar = 0;
-	for(int i = Bottom + 40;i >= RightY + 40;i--)
-	{
-		char b = Screen[i * 80 + 40 + Right + 3];
-		if(b != 0) 
-		{
-			if(last == -1)
-			{
-				last = i;
-				lastchar = b;
-			}
-			a = b;
-		}
-		Screen[i * 80 + 40 + Right + 3] = a;
-	}
-	lastchar--;
-	for(int i = last;i < Bottom + 40 + 1;i++)
-	{
-		Screen[i * 80 + 40 + Right + 3] = lastchar;
-	}
-/**/
-	for(int y = Top + 40;y < Bottom + 40 + 1;y++)
-	{
-		char a = 0;
-		for(int x = Right + 40 + 3;x >= Left + 40;x--)
-		{
-			char b = Screen[y * 80 + x];
-			if(b != 0) a = b;
-			Screen[y * 80 + x] = a;
 		}
 	}
-/**/
-	for(int i = 0;i < 12;i++)
-	{
-		if(EdgeVisible[i] == 1)
-		{
-			int a = Edges[i].a;
-			int b = Edges[i].b;
-			if(Vectors2D[b].y < Vectors2D[a].y)
-			{
-				int z = b;
-				b = a;
-				a = z;
-			}
-			DrawLineEor(Screen2,Vectors2D[a].x,Vectors2D[a].y,Vectors2D[b].x,Vectors2D[b].y,1);
-		}
-	}
-
-	for(int y = Top + 40;y < Bottom + 40 + 1;y++)
-	{
-		char a = 0;
-		for(int x = Right + 40 + 3;x >= Left + 40;x--)
-		{
-			char a = a ^ Screen2[y * 80 + x];
-			if(a == 0)
-				Screen[y * 80 + x] = 0;
-		}
-	}
-
-/**/
+//	Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = myTopC;
+	PrepareBorder();
+	FillScreen();
+	FinalMasking();
 	PrintScreen();
+	printf("\033[38;5;232;48;5;231m");
 //	}
 }
 //////////////////////////////////////////////////////
@@ -465,10 +370,8 @@ void	CalculateVectors()
 	for(int i = 0;i < sizeof(VectorsOrg)/sizeof(VEC3);i++)
 	{
 		Vectors[i] = CalculateVector(VectorsOrg[i]);
-//		Vectors2D[i].x = Vectors[i].x * 30 / 512;
-//		Vectors2D[i].y = Vectors[i].y * 30 / 512;
-		Vectors2D[i].x = (Vectors[i].x * 1024 / Vectors[i].z) / 13;
-		Vectors2D[i].y = (Vectors[i].y * 1024 / Vectors[i].z) / 13;
+		Vectors2D[i].x = (Vectors[i].x * 1024 / Vectors[i].z) / 13;//5;
+		Vectors2D[i].y = (Vectors[i].y * 1024 / Vectors[i].z) / 13;//5;
 	}
 }
 //////////////////////////////////////////////////////
@@ -600,26 +503,28 @@ VEC3 	CalculateNormal(VEC3 v)
 //////////////////////////////////////////////////////
 void	ClearScreen()
 {
-	for(int y = 0;y < 80;y++)
+	for(int i = 0;i < SCREEN_H * SCREEN_W;i ++)
 	{
-		for(int x = 0;x < 80;x++)
-			Screen[y*80+x] = 0;
+		Screen[i] = 0;
+		Screen2[i] = 0;
 	}
 }
 //////////////////////////////////////////////////////
 void	PrintScreen()
 {
 //	printf("\033[2J");
-	for(int y = 0;y < 80;y++)
+	for(int y = 0;y < SCREEN_H;y++)
 	{
-		for(int x = 0;x < 80;x++)
+		for(int x = 0;x < SCREEN_W;x++)
 		{	
-			printf("\033[38;5;232;48;5;%im ",ColorTable[Screen[y * 80 + x]]);
-/*			if(Screen[y*80+x])
-				printf("%c",Screen[y*80+x]+'a');
+#ifdef COLORED
+			printf("\033[38;5;232;48;5;%im ",ColorTable[Screen[y * SCREEN_W + x]]);
+#else
+			if(Screen[y * SCREEN_W + x])
+				printf("%c",Screen[y * SCREEN_W + x]+'a');
 			else
-				printf(" ",Screen[y*80+x]);
-/**/
+				printf(" ",Screen[y * SCREEN_W + x]);
+#endif
 		}
 		printf("\n");
 	}
@@ -640,16 +545,16 @@ void	DrawLine(char * Screen,int x0,int y0,int x1,int y1,char m)
 
 	if(!(y1 - y0))
 	{
-		Screen[(y0 + 40) * 80 + 40 + x0] = m;//Screen[y0 * 80 + (x0 >> 8)] = m;
-		Screen[(y1 + 40) * 80 + 40 + x1] = m;//Screen[y0 * 80 + (x0 >> 8)] = m;
+		Screen[(y0 + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + x0] = m;//Screen[y0 * 80 + (x0 >> 8)] = m;
+		Screen[(y1 + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + x1] = m;//Screen[y0 * 80 + (x0 >> 8)] = m;
 	}
 	else
 	{
 		int xadd = (x1 - x0) * 256 / (y1 - y0);
-		int x = ((x0 + 40) << 8) + 127;
-		for(int i = y0 + 40;i <= y1 + 40;i++,x += xadd)
+		int x = ((x0 + SCREEN_W / 2) << 8) + 127;
+		for(int i = y0 + SCREEN_H / 2;i <= y1 + SCREEN_H / 2;i++,x += xadd)
 		{
-			Screen[i * 80 + (x >> 8)] = m;
+			Screen[i * SCREEN_W + (x >> 8)] = m;
 		}
 	}
 }
@@ -669,21 +574,21 @@ void	DrawLineEor(char * Screen,int x0,int y0,int x1,int y1,char m)
 
 	if(!(y1 - y0))
 	{
-		Screen[(y0 + 40) * 80 + 40 + x0] ^= m;
-		Screen[(y1 + 40) * 80 + 40 + x1] ^= m;
+		Screen[(y0 + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + x0] ^= m;
+		Screen[(y1 + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + x1] ^= m;
 	}
 	else
 	{
 		int xadd = (x1 - x0) * 256 / (y1 - y0);
-		int x = ((x0 + 40) << 8) + 127;
-		for(int i = y0 + 40;i < y1 + 40;i++,x += xadd)
+		int x = ((x0 + SCREEN_W / 2) << 8) + 127;
+		for(int i = y0 + SCREEN_H / 2;i < y1 + SCREEN_H / 2;i++,x += xadd)
 		{
-			Screen[i * 80 + (x >> 8)] ^= m;
+			Screen[i * SCREEN_W + (x >> 8)] ^= m;
 		}
 	}
 }
 //////////////////////////////////////////////////////
-void	DrawLineC(char * Screen,int x0,int y0,int x1,int y1,int aNorm,int bNorm)
+/*void	DrawLineC(char * Screen,int x0,int y0,int x1,int y1,int aNorm,int bNorm)
 {
 	if(y1 < y0)
 	{
@@ -722,6 +627,7 @@ void	DrawLineC(char * Screen,int x0,int y0,int x1,int y1,int aNorm,int bNorm)
 		}
 	}
 }
+*/
 //////////////////////////////////////////////////////
 void CalculateEdgeSplit()
 {
@@ -813,6 +719,283 @@ void CalculateEdgeSplit()
 			}
 		}
 	}
+}
+//////////////////////////////////////////////////////
+void FinalMasking()
+{
+	for(int i = 0;i < 12;i++)
+	{
+		if(EdgeVisible[i] == 1)
+		{
+			int a = Edges[i].a;
+			int b = Edges[i].b;
+			if(Vectors2D[b].y < Vectors2D[a].y)
+			{
+				int z = b;
+				b = a;
+				a = z;
+			}
+			DrawLineEor(Screen2,Vectors2D[a].x,Vectors2D[a].y,Vectors2D[b].x,Vectors2D[b].y,1);
+		}
+	}
+
+	for(int y = Top + SCREEN_H / 2;y < Bottom + SCREEN_H / 2 + 1;y++)
+	{
+		char a = 0;
+		for(int x = Right + SCREEN_W / 2 + 3;x >= Left + SCREEN_W / 2;x--)
+		{
+			a = a ^ Screen2[y * SCREEN_W + x];
+			if(a == 0)
+				Screen[y * SCREEN_W + x] = 0;
+		}
+	}
+}
+//////////////////////////////////////////////////////
+void PrepareBorder()
+{
+	printf("PrepareBorder\n");
+	char a = 0,b = 0;
+	int last = -1;
+	int lastchar = 0;
+	printf("TopRight %i,%i\n", Top,RightY);
+
+	a = 0;
+	for(int i = Top + SCREEN_H / 2;i < Bottom + SCREEN_H / 2;i++)
+	{
+		char b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
+		if(b != 0) 
+			a = b;
+		Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+	}
+
+	return;
+	int doubled1[10];
+	int doubled[10];
+	int doublednum = 0;
+	int lastSame = Top + SCREEN_H / 2;
+	a = 0;
+	doubled1[doublednum] = Top + SCREEN_H / 2;
+	doubled[doublednum++] = Top + SCREEN_H / 2;
+	for(int i = Top + SCREEN_H / 2;i < Bottom + SCREEN_H / 2;i++)
+	{
+		b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
+		if(b != 0)
+		{
+			if(b == a)
+			{
+				doubled1[doublednum] = lastSame;
+				doubled[doublednum++] = i;
+				lastSame = i;
+			}
+			a = b;
+		}
+	}
+	doubled1[doublednum] = Bottom + SCREEN_H / 2;
+	doubled[doublednum++] = Bottom + SCREEN_H / 2;
+
+	printf("doublednum %i\n", doublednum);
+	for(int k = 0;k < doublednum;k++)
+	{
+		printf("%i\n", doubled[k]);
+	}
+
+//	for(int i = Top + 40;i < RightY + 40;i++)
+	int back = Top;
+	for(int i = Top + SCREEN_H / 2;i < Bottom + SCREEN_H / 2;i++)
+	{
+		b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
+		if(b != 0)
+		{
+			back = i;
+			break;
+		}
+	}
+	char c = b;
+	for(int i = back + 1;i < Bottom + SCREEN_H / 2;i++)
+	{
+		char d = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
+		if(d != 0)
+		{
+			c = d;
+			break;
+		}
+	}
+
+	a = b - (c - b);
+/**/
+//	a = 0;
+	int p = 0;
+	printf("doublednum %i\n", doublednum);
+	for(int k = 0;k < doublednum-1;k++)
+	{
+		if(p == 0)
+		{
+			printf("%i,%i\n", doubled[k],doubled[k+1]);
+			for(int i = doubled[k];i < doubled[k+1];i++)
+			{
+				char b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
+				if(b != 0) 
+				{
+					if(last == -1)
+					{
+						last = i;
+						lastchar = b;
+					}
+					a = b;
+				}
+				Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+			}
+/**/	}
+		else
+		{
+			printf("%i,%i\n", doubled[k],doubled1[k+1]);
+			for(int i = doubled1[k+1];i >= doubled[k];i--)
+			{
+				char b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
+				if(b != 0) 
+				{
+					if(last == -1)
+					{
+						last = i;
+						lastchar = b;
+					}
+					a = b;
+				}
+				Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+			}
+/**/	}
+		p ^= 1;
+	}
+
+/*	printf("back: %i\n",back);
+	a = 0;
+	for(int i = back;i < Bottom + SCREEN_H / 2;i++)
+	{
+		char b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
+		if(b != 0) 
+		{
+			if(last == -1)
+			{
+				last = i;
+				lastchar = b;
+			}
+			a = b;
+		}
+		Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+	}
+
+/*	a = 0;
+	for(int i = back;i >= Top + SCREEN_H / 2;i--)
+	{
+		char b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
+		if(b != 0) 
+			a = b-1;
+		Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+	}
+
+/*	for(int i = Top + SCREEN_H / 2;i < last;i++)
+	{
+		Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1] = lastchar;
+	}
+/**/
+}
+//////////////////////////////////////////////////////
+void FillScreen()
+{
+	for(int y = Top + SCREEN_H / 2;y < Bottom + SCREEN_H / 2 + 1;y++)
+	{
+		char a = 0;
+		for(int x = Right + SCREEN_W / 2 + 3;x >= Left + SCREEN_W / 2;x--)
+		{
+			char b = Screen[y * SCREEN_W + x];
+			if(b != 0) a = b;
+			Screen[y * SCREEN_W + x] = a;
+		}
+	}
+/**/
+}
+//////////////////////////////////////////////////////
+int CalculateRightEdges(int MostTop)
+{
+	int RightSideEdgeBits = 0;	
+	for(int i = 0;i < 12;i++)
+	{
+		if(EdgeVisible[i] == 1)
+		{
+			if(Edges[i].a == MostTop || Edges[i].b == MostTop)
+			{
+				EDGE e1;
+				EDGE e0 = Edges[i];
+				if(e0.b == MostTop)
+				{
+					int a = e0.a;
+					e0.a = e0.b;
+					e0.b = a;
+				}
+				int j = 0;
+				for(j = i + 1;j < 12;j++)
+				{
+					if(EdgeVisible[j] == 1)
+					{
+						if(Edges[j].a == MostTop || Edges[j].b == MostTop)
+						{
+							e1 = Edges[j];
+							if(e1.b == MostTop)
+							{
+								int a = e1.a;
+								e1.a = e1.b;
+								e1.b = a;
+							}
+							break;
+						}
+					}
+				}
+				int iedge = i;
+				if(Vectors2D[e1.b].x > Vectors2D[e0.b].x) 
+				{
+					e0 = e1;
+					iedge = j;
+				}
+
+				RightSideEdgeBits |= 1 << iedge;
+				int k = 0;
+				for(int l = 0;l < 3;l++)
+				{
+					for(k = 0;k < 12;k++)
+					{
+						if((RightSideEdgeBits & (1 << k)) == 0 && EdgeVisible[k] == 1)
+						{
+							if(Edges[k].a == e0.b || Edges[k].b == e0.b)
+							{
+								break;
+							}
+						}
+					}
+					if(k < 12)
+					{
+						e1 = Edges[k];
+						if(e1.b == e0.b)
+						{
+							int z = e1.a;
+							e1.a = e1.b;
+							e1.b = z;
+						}
+						if(Vectors2D[e1.b].y > Vectors2D[e1.a].y)
+						{
+							e0 = e1;
+							RightSideEdgeBits |= 1 << k;
+						}
+						else
+							break;
+					}
+					else
+						break;
+				}
+				break;
+			}
+		}
+	}
+	return RightSideEdgeBits;
 }
 //////////////////////////////////////////////////////
 /*#define	TEST_TOP	1
