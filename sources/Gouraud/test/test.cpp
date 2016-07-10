@@ -367,7 +367,7 @@ int	main(int argv,char **argc)
 				if(v1.edgeside == 1)
 				{
 					char a = 0;
-//					if(v1.v.y < v0.v.y) a = -1;
+					if(v1.v.y < v0.v.y) a = -1;
 //					else
 //					if(v0.v.y < v1.v.y && cp == 1) a = 1;
 					Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = v1.c + a;// + coloradd;				
@@ -812,7 +812,7 @@ void PrepareBorder()
 			{
 
 			}
-			if(a < b && a != 0)
+			if(a > b && a != 0)
 			{
 				g = 1;
 				break;
@@ -820,7 +820,7 @@ void PrepareBorder()
 			a = b;
 		}
 	}
-	if(g == 1)
+/*	if(g == 1)
 	{
 		a = 0;
 		int add = 0;
