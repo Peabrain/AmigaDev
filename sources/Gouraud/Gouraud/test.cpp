@@ -1,6 +1,7 @@
 #include	<stdio.h>
 #include 	<stdlib.h>
 #include	<math.h>
+#include	"MyWindow.h"
 //////////////////////////////////////////////////////
 #define	PI 3.141592653589793
 #define	SINCOS 1024
@@ -383,6 +384,8 @@ int	main(int argv,char **argc)
 //	FinalMasking();
 	PrintScreen();
 	printf("\033[38;5;232;48;5;231m");
+	createWindow();
+	getchar();
 //	}
 }
 //////////////////////////////////////////////////////

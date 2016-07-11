@@ -63,6 +63,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="test.cpp" />
+    <ClCompile Include="MyWindow.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MyWindow.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
