@@ -1,6 +1,11 @@
 #include	<stdio.h>
 #include 	<stdlib.h>
 #include	<math.h>
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
 //////////////////////////////////////////////////////
 #define	PI 3.141592653589793
 #define	SINCOS 1024
@@ -157,10 +162,68 @@ void	DrawLine(char * Screen,int x0,int y0,int x1,int y1,char m);
 void	DrawLineEor(char * Screen,int x0,int y0,int x1,int y1,char m);
 void	DrawLineC(char * Screen,int x0,int y0,int x1,int y1,int aNorm,int bNorm);
 //////////////////////////////////////////////////////
-#define COLORED
+//#define COLORED
+//////////////////////////////////////////////////////
+void reshape(int width, int height) {
+
+    glViewport(0, 0, width, height);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+
+    //set the coordinate system, with the origin in the top left
+    gluOrtho2D(0, width, height, 0);
+    glMatrixMode(GL_MODELVIEW);
+
+}
+void display(void) 
+{
+   //clear white, draw with black
+    glClearColor(255, 255, 255, 0);
+    glColor3d(0, 0, 0);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    //this draws a square using vertices
+    glBegin(GL_QUADS);
+    glVertex2i(0, 0);
+    glVertex2i(0, 128);
+    glVertex2i(128, 128);
+    glVertex2i(128, 0);
+    glEnd();
+
+    //a more useful helper
+    glRecti(200, 200, 250, 250);
+    glutSwapBuffers();
+}
+void idle(void) 
+{
+    glutPostRedisplay();
+}
+void DoOpenGl(int argv,char **argc)
+{
+    //a basic set up...
+    glutInit(&argv,argc);
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+    glutInitWindowSize(640, 480);
+
+    //create the window, the argument is the title
+    glutCreateWindow("GLUT program");
+
+    //pass the callbacks
+    glutDisplayFunc(display);
+    glutReshapeFunc(reshape);
+    glutIdleFunc(idle);
+
+    glutMainLoop();
+
+    //we never get here because glutMainLoop() is an infinite loop
+}
 //////////////////////////////////////////////////////
 int	main(int argv,char **argc)
 {
+	DoOpenGl(argv,argc);
+
+	return 0;
 	Init();
 
 	if(argv == 4)
@@ -866,13 +929,13 @@ void PrepareBorder()
 		{
 			if(a != 0)
 			{
-//				if(a < b)
-//					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
-//				else
-//				if(a == b)
+				if(a < b)
+					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a + (b - a);
+				else
+				if(a == b)
 					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
-//				else
-//					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
+				else
+					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a + (b - a);
 				break;
 			}
 			a = b;
@@ -893,7 +956,7 @@ void PrepareBorder()
 				}
 				else
 				{
-					for(int j = i;j >= back;j--)
+					for(int j = i - 1;j >= back;j--)
 						Screen[j * SCREEN_W + SCREEN_W / 2 + Right + 1] = b;
 				}
 /**/
