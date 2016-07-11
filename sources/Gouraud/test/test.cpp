@@ -378,9 +378,9 @@ int	main(int argv,char **argc)
 		}
 	}
 //	Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = myTopC;
-	PrepareBorder();
-	FillScreen();
-	FinalMasking();
+//	PrepareBorder();
+//	FillScreen();
+//	FinalMasking();
 	PrintScreen();
 	printf("\033[38;5;232;48;5;231m");
 //	}
