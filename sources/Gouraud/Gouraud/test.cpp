@@ -344,7 +344,7 @@ int	main(int argv,char **argc)
 			printf("%i, %i\n",e,Vec2Col[sorted[e]].c);
 
 
-		for(int e = 0;e < sortedCount - 1;e += 2)
+		for(int e = 0;e < sortedCount - 1;e += 1)
 		{
 			VEC2COL v0 = Vec2Col[sorted[e]];
 			VEC2COL v1 = Vec2Col[sorted[e + 1]];
@@ -382,14 +382,27 @@ int	main(int argv,char **argc)
 					Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = v1.c;// + coloradd;				
 					Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 2] = k + 1;				
 				}
+//				break;
 			}
 //			e++;
 		}
 	}
+	for(int i = 0;i < 12;i++) 
+	{
+		if(EdgeVisible[i] == 2)
+		{
+			VEC2 v0 = Vectors2D[Edges[i].a];			
+			VEC2 v1 = Vectors2D[Edges[i].b];
+			int Norm0 = -Normals[Edges[i].a].z;
+			int Norm1 = -Normals[Edges[i].b].z;
+//			DrawLineC(Screen,v0.x,v0.y,v1.x,v1.y,Norm0,Norm1);
+		}
+	}
+
 //	Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = myTopC;
-//	PrepareBorder();
-//	FillScreen();
-//	FinalMasking();
+	PrepareBorder();
+	FillScreen();
+	FinalMasking();
 	PrintScreen();
 	printf("\033[38;5;232;48;5;231m");
 //	}
@@ -632,7 +645,7 @@ void	DrawLineEor(char * Screen,int x0,int y0,int x1,int y1,char m)
 	}
 }
 //////////////////////////////////////////////////////
-/*void	DrawLineC(char * Screen,int x0,int y0,int x1,int y1,int aNorm,int bNorm)
+void	DrawLineC(char * Screen,int x0,int y0,int x1,int y1,int aNorm,int bNorm)
 {
 	if(y1 < y0)
 	{
@@ -646,8 +659,8 @@ void	DrawLineEor(char * Screen,int x0,int y0,int x1,int y1,char m)
 		aNorm = bNorm;
 		bNorm = a;
 	}
-	aNorm = (aNorm * SHADEFACTOR) + 127;
-	bNorm = (bNorm * SHADEFACTOR) + 127;
+	aNorm = (ACos[aNorm + 256] * SHADEFACTOR);
+	bNorm = (ACos[bNorm + 256] * SHADEFACTOR);
 
 	printf("Draw (%i,%i) to (%i,%i), Norm (%i,%i)\n",x0,y0,x1,y1,aNorm,bNorm);
 
@@ -671,7 +684,6 @@ void	DrawLineEor(char * Screen,int x0,int y0,int x1,int y1,char m)
 		}
 	}
 }
-*/
 //////////////////////////////////////////////////////
 void CalculateEdgeSplit()
 {
@@ -732,7 +744,7 @@ void CalculateEdgeSplit()
 					p = -1;
 					nAdd = -0x100;
 				}
-//				printf("cut: %i (%i,%i),%i,(%i,%i)\n",u,iaNorm, ibNorm,p,vDiff.x,vDiff.y);
+				printf("cut: %i (%i,%i),%i,(%i,%i)\n",u,iaNorm, ibNorm,p,vDiff.x,vDiff.y);
 				int n = iaNorm - aNorm;
 				if(u + p != 0)
 				{
@@ -743,13 +755,12 @@ void CalculateEdgeSplit()
 						nVec.v.x = (vDiff.x * nNorm / NormDiff + va.x);
 						nVec.v.y = (vDiff.y * nNorm / NormDiff + va.y);
 						nVec.c = ((n + aNorm) >> 8);
-						Screen[(nVec.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + nVec.v.x] = nVec.c;//coloradd;// + cp;
+//						Screen[(nVec.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + nVec.v.x] = nVec.c;//coloradd;// + cp;
 						Vec2Col[Vec2ColCount++] = nVec;
 						n += nAdd;
 					}
 				}
 				else
-//				if(vDiff.y == 0)
 				{
 					int nNorm = n;
 					VEC2COL nVec;
@@ -760,20 +771,21 @@ void CalculateEdgeSplit()
 					}
 					else
 					{
-						nVec.v.x = (vDiff.x * nNorm / NormDiff + va.x);
-						nVec.v.y = (vDiff.y * nNorm / NormDiff + va.y);
+//						nVec.v.x = (vDiff.x * nNorm / NormDiff + va.x);
+//						nVec.v.y = (vDiff.y * nNorm / NormDiff + va.y);
 					}
 					nVec.c = ((n + aNorm) >> 8);
 					Vec2Col[Vec2ColCount++] = nVec;
-					Screen[(nVec.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + nVec.v.x] = nVec.c;//coloradd;// + cp;
+//					Screen[(nVec.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + nVec.v.x] = nVec.c;//coloradd;// + cp;
 					if(NormDiff == 0)
 					{
 						nVec.v.x = vb.x;
 						nVec.v.y = vb.y;
 						nVec.c = ((n + aNorm) >> 8);
 						Vec2Col[Vec2ColCount++] = nVec;
-						Screen[(nVec.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + nVec.v.x] = nVec.c;//coloradd;// + cp;
+//						Screen[(nVec.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + nVec.v.x] = nVec.c;//coloradd;// + cp;
 					}
+					
 				}
 				EdgesCalcedLast[i] = Vec2ColCount; 
 			}
@@ -825,23 +837,76 @@ void PrepareBorder()
 	int g = 0;
 	int i = 0;
 
-/*	for(i = Top + SCREEN_H / 2;i < Bottom + SCREEN_H / 2;i++)
+	for(i = Top + SCREEN_H / 2;i < Bottom + SCREEN_H / 2;i++)
 	{
 		char b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
 		if(b != 0)
 		{
-			if(a != b)
+			if(a != 0)
 			{
-
-			}
-			if(a > b && a != 0)
-			{
-				g = 1;
+				if(a < b)
+					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
+				else
+				if(a == b)
+					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+				else
+					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
 				break;
 			}
 			a = b;
 		}
 	}
+
+	a = 0;
+	for(i = Bottom + SCREEN_H / 2;i >= Top + SCREEN_H / 2;i--)
+	{
+		char b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
+		if(b != 0)
+		{
+			if(a != 0)
+			{
+				if(a < b)
+					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
+				else
+				if(a == b)
+					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+				else
+					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
+				break;
+			}
+			a = b;
+		}
+	}
+
+	for(i = Top + SCREEN_H / 2;i < Bottom + SCREEN_H / 2;i++)
+	{
+		char b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
+		if(b != 0)
+		{
+			if(a != 0)
+			{
+				if(a <= b)
+				{
+					for(int j = back;j < i;j++)
+						Screen[j * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+				}
+				else
+				{
+					for(int j = i;j >= back;j--)
+						Screen[j * SCREEN_W + SCREEN_W / 2 + Right + 1] = b;
+				}
+/**/
+			}
+			a = b;
+			back = i;
+		}
+	}
+/*	for(i = back;i < Bottom + SCREEN_H / 2;i++)
+	{
+		Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+	}
+*/
+	return;
 /*	if(g == 1)
 	{
 		a = 0;
