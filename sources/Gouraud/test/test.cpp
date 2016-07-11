@@ -113,8 +113,8 @@ int ColorTable[16] =
 int WinkelX = (-200) & (SINCOS - 1),WinkelY = (200) & (SINCOS - 1),WinkelZ = (200) & (SINCOS - 1);
 #define SHADEFACTOR 9
 //////////////////////////////////////////////////////
-#define SCREEN_W 80
-#define SCREEN_H 80
+#define SCREEN_W 192
+#define SCREEN_H 192
 int	Sin[SINCOS];
 int	Cos[SINCOS];
 int ACos[256*2];
@@ -264,6 +264,15 @@ int	main(int argv,char **argc)
 			int i = Polygons[j].edges[e];
 			int myVec2Col = EdgesCalced[i]; 
 			int myVec2ColLast = EdgesCalcedLast[i];
+
+/*			for(int i = myVec2Col;i < myVec2ColLast;i++)
+			{
+				int x = Vec2Col[i].v.x;
+				int y = Vec2Col[i].v.y;
+				char c = Vec2Col[i].c;
+				Screen[(y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + x] = c;//coloradd;// + cp;
+			}
+*/
 			if(myVec2ColLast != -1)
 			{
 				if(RightSideEdgeBits & (1 << i))
@@ -355,8 +364,8 @@ int	main(int argv,char **argc)
 					r = -1;
 //					if() r = -1;
 				}
-//				Screen[(v0.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + v0.v.x] = v0.c + coloradd;//coloradd;// + cp;
-//				Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + v1.v.x] = v1.c + coloradd;//coloradd;// + cp;
+//				Screen[(v0.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + v0.v.x] ^= v0.c + coloradd;//coloradd;// + cp;
+//				Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + v1.v.x] ^= v1.c + coloradd;//coloradd;// + cp;
 				DrawLine(Screen,v0.v.x,v0.v.y,v1.v.x,v1.v.y,v0.c + coloradd);//^(v0.c-1));
 				if(v0.edgeside == 1)
 				{
@@ -370,7 +379,7 @@ int	main(int argv,char **argc)
 					if(v1.v.y < v0.v.y) a = -1;
 //					else
 //					if(v0.v.y < v1.v.y && cp == 1) a = 1;
-					Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = v1.c + a;// + coloradd;				
+					Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = v1.c;// + coloradd;				
 					Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 2] = k + 1;				
 				}
 			}
@@ -405,8 +414,8 @@ void	CalculateVectors()
 	for(int i = 0;i < sizeof(VectorsOrg)/sizeof(VEC3);i++)
 	{
 		Vectors[i] = CalculateVector(VectorsOrg[i]);
-		Vectors2D[i].x = (Vectors[i].x * 1024 / Vectors[i].z) / 13;//5;
-		Vectors2D[i].y = (Vectors[i].y * 1024 / Vectors[i].z) / 13;//5;
+		Vectors2D[i].x = (Vectors[i].x * 1024 / Vectors[i].z) / 5;
+		Vectors2D[i].y = (Vectors[i].y * 1024 / Vectors[i].z) / 5;
 	}
 }
 //////////////////////////////////////////////////////
@@ -576,7 +585,7 @@ void	DrawLine(char * Screen,int x0,int y0,int x1,int y1,char m)
 		x1 = x0;
 		x0 = a;
 	}
-	printf("Draw (%i,%i) to (%i,%i), %i\n",x0,y0,x1,y1,m);
+	printf("Draw (%i,%i) to (%i,%i), %c\n",x0,y0,x1,y1,m + 'a');
 
 	if(!(y1 - y0))
 	{
@@ -700,8 +709,8 @@ void CalculateEdgeSplit()
 
 				int aNorm = -Normals[a].z;
 				int bNorm = -Normals[b].z;
-				aNorm = (ACos[aNorm + 256] * SHADEFACTOR) + 127;
-				bNorm = (ACos[bNorm + 256] * SHADEFACTOR) + 127;
+				aNorm = (ACos[aNorm + 256] * SHADEFACTOR);
+				bNorm = (ACos[bNorm + 256] * SHADEFACTOR);
 
 				int NormDiff = bNorm - aNorm;
 				VEC2 vDiff;
@@ -734,7 +743,7 @@ void CalculateEdgeSplit()
 						nVec.v.x = (vDiff.x * nNorm / NormDiff + va.x);
 						nVec.v.y = (vDiff.y * nNorm / NormDiff + va.y);
 						nVec.c = ((n + aNorm) >> 8);
-//						Screen[(nVec.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + nVec.v.x] = nVec.c;//coloradd;// + cp;
+						Screen[(nVec.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + nVec.v.x] = nVec.c;//coloradd;// + cp;
 						Vec2Col[Vec2ColCount++] = nVec;
 						n += nAdd;
 					}
@@ -744,14 +753,27 @@ void CalculateEdgeSplit()
 				{
 					int nNorm = n;
 					VEC2COL nVec;
-					nVec.v.x = va.x;
-					nVec.v.y = va.y;
+					if(NormDiff == 0)
+					{
+						nVec.v.x = va.x;
+						nVec.v.y = va.y;
+					}
+					else
+					{
+						nVec.v.x = (vDiff.x * nNorm / NormDiff + va.x);
+						nVec.v.y = (vDiff.y * nNorm / NormDiff + va.y);
+					}
 					nVec.c = ((n + aNorm) >> 8);
 					Vec2Col[Vec2ColCount++] = nVec;
-					nVec.v.x = vb.x;
-					nVec.v.y = vb.y;
-					nVec.c = ((n + aNorm) >> 8);
-					Vec2Col[Vec2ColCount++] = nVec;
+					Screen[(nVec.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + nVec.v.x] = nVec.c;//coloradd;// + cp;
+					if(NormDiff == 0)
+					{
+						nVec.v.x = vb.x;
+						nVec.v.y = vb.y;
+						nVec.c = ((n + aNorm) >> 8);
+						Vec2Col[Vec2ColCount++] = nVec;
+						Screen[(nVec.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + nVec.v.x] = nVec.c;//coloradd;// + cp;
+					}
 				}
 				EdgesCalcedLast[i] = Vec2ColCount; 
 			}
