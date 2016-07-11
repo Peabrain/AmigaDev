@@ -157,7 +157,7 @@ void	DrawLine(char * Screen,int x0,int y0,int x1,int y1,char m);
 void	DrawLineEor(char * Screen,int x0,int y0,int x1,int y1,char m);
 void	DrawLineC(char * Screen,int x0,int y0,int x1,int y1,int aNorm,int bNorm);
 //////////////////////////////////////////////////////
-//#define COLORED
+#define COLORED
 //////////////////////////////////////////////////////
 int	main(int argv,char **argc)
 {
@@ -341,13 +341,14 @@ int	main(int argv,char **argc)
 		//////////
 		printf("sortedC %i\n",sortedCount);
 		for(int e = 0;e < sortedCount;e++)
-			printf("%i, %i\n",e,Vec2Col[sorted[e]].c);
+			printf("%i\n",sorted[e]);
 
 
 		for(int e = 0;e < sortedCount - 1;e += 1)
 		{
 			VEC2COL v0 = Vec2Col[sorted[e]];
 			VEC2COL v1 = Vec2Col[sorted[e + 1]];
+			printf("draw: %i(%i,%i) to %i(%i,%i)\n",sorted[e],v0.v.x,v0.v.y,sorted[e+1],v1.v.x,v1.v.y);
 			if(v0.c == v1.c)
 			{
 			//	coloradd = 0;
@@ -768,14 +769,14 @@ void CalculateEdgeSplit()
 					{
 						nVec.v.x = va.x;
 						nVec.v.y = va.y;
+					nVec.c = ((n + aNorm) >> 8);
+					Vec2Col[Vec2ColCount++] = nVec;
 					}
 					else
 					{
 //						nVec.v.x = (vDiff.x * nNorm / NormDiff + va.x);
 //						nVec.v.y = (vDiff.y * nNorm / NormDiff + va.y);
 					}
-					nVec.c = ((n + aNorm) >> 8);
-					Vec2Col[Vec2ColCount++] = nVec;
 //					Screen[(nVec.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + nVec.v.x] = nVec.c;//coloradd;// + cp;
 					if(NormDiff == 0)
 					{
@@ -865,13 +866,13 @@ void PrepareBorder()
 		{
 			if(a != 0)
 			{
-				if(a < b)
-					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
-				else
-				if(a == b)
+//				if(a < b)
+//					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
+//				else
+//				if(a == b)
 					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
-				else
-					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
+//				else
+//					Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
 				break;
 			}
 			a = b;
