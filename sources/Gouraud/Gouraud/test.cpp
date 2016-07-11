@@ -113,8 +113,8 @@ int ColorTable[16] =
 int WinkelX = (-200) & (SINCOS - 1),WinkelY = (200) & (SINCOS - 1),WinkelZ = (200) & (SINCOS - 1);
 #define SHADEFACTOR 9
 //////////////////////////////////////////////////////
-#define SCREEN_W 192
-#define SCREEN_H 192
+#define SCREEN_W 80
+#define SCREEN_H 80
 int	Sin[SINCOS];
 int	Cos[SINCOS];
 int ACos[256*2];
@@ -414,8 +414,8 @@ void	CalculateVectors()
 	for(int i = 0;i < sizeof(VectorsOrg)/sizeof(VEC3);i++)
 	{
 		Vectors[i] = CalculateVector(VectorsOrg[i]);
-		Vectors2D[i].x = (Vectors[i].x * 1024 / Vectors[i].z) / 5;
-		Vectors2D[i].y = (Vectors[i].y * 1024 / Vectors[i].z) / 5;
+		Vectors2D[i].x = (Vectors[i].x * 1024 / Vectors[i].z) / (13 * 80 / SCREEN_W);
+		Vectors2D[i].y = (Vectors[i].y * 1024 / Vectors[i].z) / (13 * 80 / SCREEN_H);
 	}
 }
 //////////////////////////////////////////////////////
