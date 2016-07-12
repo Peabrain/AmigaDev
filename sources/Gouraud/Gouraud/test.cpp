@@ -116,11 +116,12 @@ int ColorTable[16] =
 //int WinkelX = (-128) & (SINCOS - 1),WinkelY = (0) & (SINCOS - 1),WinkelZ = (0) & (SINCOS - 1);
 //int WinkelX = (-128) & (SINCOS - 1),WinkelY = (-32) & (SINCOS - 1),WinkelZ = (-64) & (SINCOS - 1);
 //int WinkelX = (-128) & (SINCOS - 1),WinkelY = (-64) & (SINCOS - 1),WinkelZ = (0) & (SINCOS - 1);
-int WinkelX = (-210) & (SINCOS - 1),WinkelY = (200) & (SINCOS - 1),WinkelZ = (200) & (SINCOS - 1);
+int WinkelX_ = (820),WinkelY_ = (100),WinkelZ_ = (300);
+int WinkelX = (713) & (SINCOS - 1),WinkelY = (217) & (SINCOS - 1),WinkelZ = (119) & (SINCOS - 1);
 #define SHADEFACTOR 16
 //////////////////////////////////////////////////////
-#define SCREEN_W 512
-#define SCREEN_H 512
+#define SCREEN_W 192
+#define SCREEN_H 192
 int	Sin[SINCOS];
 int	Cos[SINCOS];
 int ACos[256*2];
@@ -185,11 +186,14 @@ void display(void)
 
     glClear(GL_COLOR_BUFFER_BIT);// | GL_DEPTH_BUFFER_BIT);
 
+    WinkelX = (WinkelX_ >> 8) & (SINCOS - 1);
+    WinkelY = (WinkelY_ >> 8) & (SINCOS - 1);
+    WinkelZ = (WinkelZ_ >> 8) & (SINCOS - 1);
 	Render();
 	PrintScreen();
-	WinkelX = (WinkelX + 1) & (SINCOS - 1);
-	WinkelY = (WinkelY - 2) & (SINCOS - 1);
-	WinkelZ = (WinkelZ + 1) & (SINCOS - 1);
+	WinkelX_ = (WinkelX_ - 411);
+	WinkelY_ = (WinkelY_ + 377);
+	WinkelZ_ = (WinkelZ_ + 211);
     //this draws a square using vertices
 //    glBegin(GL_POINTS);
 //    glVertex2i(0, 0);
@@ -327,8 +331,8 @@ void Render()
 		{
 			coloradd = -1;
 		}
-		if(Polygons[j].normalCalced.y < 0)
-			cp = 1;
+//		if(Polygons[j].normalCalced.y < 0)
+//			cp = 1;
 //		if(Polygons[j].normalCalced.y > 0)// || coloradd == -1)
 //			coloradd2 = -1;
 		for(int e = 0;e < 4;e++)
@@ -366,7 +370,7 @@ void Render()
 
 					coloradd2 = 0;
 					int d = 0;
-					if(nx > 0) 
+					if(nx >= 0) 
 					{
 						d = ny * v1.y + nx * v1.x;
 	//					if(d < 0) coloradd2 = -1;
@@ -377,7 +381,7 @@ void Render()
 						if(d < 0) coloradd2 = 1;
 					}
 //					printf("d %i (%i), %i\n",d,coloradd2,nx);
-	/**/				for(int m = myVec2Col;m < myVec2ColLast;m++)
+					for(int m = myVec2Col;m < myVec2ColLast;m++)
 					{
 						Vec2Col[m].edgeside = 1;
 						int y = (Vec2Col[m].v.y + SCREEN_H / 2);
@@ -435,12 +439,17 @@ void Render()
 //				}
 //				Screen[(v0.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + v0.v.x] ^= v0.c + coloradd;//coloradd;// + cp;
 //				Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + v1.v.x] ^= v1.c + coloradd;//coloradd;// + cp;
+				if(v0.c + coloradd < 1 || v1.c + coloradd < 1)
+				{
+					v0.c = 1;
+					v1.c = v0.c;
+				} 
 				DrawLine(Screen,v0.v.x,v0.v.y,v1.v.x,v1.v.y,v0.c + coloradd);//^(v0.c-1));
 				if(v0.edgeside == 1)
 				{
 //					if(cf == 1)
 					Screen[(v0.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = v0.c;// + coloradd;// + cp;
-					Screen[(v0.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 2] = k + 1;// + coloradd;// + cp;
+//					Screen[(v0.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 2] = k + 1;// + coloradd;// + cp;
 				}
 				if(v1.edgeside == 1)
 				{
@@ -449,11 +458,11 @@ void Render()
 //					else
 //					if(v0.v.y < v1.v.y && cp == 1) a = 1;
 					Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = v1.c;// + coloradd;				
-					Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 2] = k + 1;				
+//					Screen[(v1.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 2] = k + 1;				
 				}
 //				break;
 			}
-//			e++;
+//			e--;
 		}
 	}
 //	Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = myTopC;
@@ -474,7 +483,7 @@ void	Init()
 	for(int i = 0;i < 12;i++) EdgeVisible[i] = 0;
 	for(int i = 0;i < 256*2;i++)
 	{
-		ACos[i] = (int)(sin((double)(i - 256) / 256.0) * 180.0 + 96);
+		ACos[i] = (int)(sin((double)(i - 256) / 256.0) * 310.0 + 0);
 	}
 }
 //////////////////////////////////////////////////////
@@ -483,8 +492,8 @@ void	CalculateVectors()
 	for(int i = 0;i < sizeof(VectorsOrg)/sizeof(VEC3);i++)
 	{
 		Vectors[i] = CalculateVector(VectorsOrg[i]);
-		Vectors2D[i].x = (Vectors[i].x * 1024 / Vectors[i].z) / (13 * 80 / SCREEN_W);
-		Vectors2D[i].y = (Vectors[i].y * 1024 / Vectors[i].z) / (13 * 80 / SCREEN_H);
+		Vectors2D[i].x = (Vectors[i].x * 1024 / Vectors[i].z) / (15 * 80 / SCREEN_W);
+		Vectors2D[i].y = (Vectors[i].y * 1024 / Vectors[i].z) / (15 * 80 / SCREEN_H);
 	}
 }
 //////////////////////////////////////////////////////
@@ -532,7 +541,7 @@ int	IsPolygonVisible(int p,VEC3 source)
 	s.y = source.y - Vectors[Polygons[p].vertices[1]].y;
 	s.z = source.z - Vectors[Polygons[p].vertices[1]].z;
 	int	dot = Dot(Polygons[p].normalCalced,s);
-	if(dot > 8) return 1;
+	if(dot > 6) return 1;
 	return 0;
 }
 //////////////////////////////////////////////////////
@@ -633,7 +642,7 @@ void	PrintScreen()
 		{	
 			if(Screen[y * SCREEN_W + x])
 			{
-				int c = (Screen[y * SCREEN_W + x] * 16) << (23);
+				int c = ((Screen[y * SCREEN_W + x] & 15) * 16) << (23);
 				glColor3i(c,c,c);
 			    glVertex2i(x, y);
 			}
@@ -833,22 +842,21 @@ void CalculateEdgeSplit()
 				else
 				{
 					int nNorm = n;
-					if(NormDiff == 0)
+					VEC2COL nVec;
+//					if(NormDiff == 0)
 					{
-						VEC2COL nVec;
 						nVec.v.x = va.x >> 8;
 						nVec.v.y = va.y >> 8;
 						nVec.c = ((n + aNorm) >> 8);
 						Vec2Col[Vec2ColCount++] = nVec;
 					}
-/*					if(NormDiff == 0)
+//					if(NormDiff == 0)
 					{
 						nVec.v.x = vb.x >> 8;
 						nVec.v.y = vb.y >> 8;
 						nVec.c = ((n + aNorm) >> 8);
 						Vec2Col[Vec2ColCount++] = nVec;
 					}
-*/
 				}
 				EdgesCalcedLast[i] = Vec2ColCount; 
 			}
@@ -902,23 +910,23 @@ void PrepareBorder()
 
 	for(i = Top + SCREEN_H / 2;i < Bottom + SCREEN_H / 2;i++)
 	{
-		char b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
+		b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
 		if(b != 0)
 		{
 			if(a != 0)
 			{
-				if(a < b)
-					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
-				else
-				if(a == b)
-					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
-				else
-					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
 				break;
 			}
 			a = b;
 		}
 	}
+	if(a < b)
+		Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
+	else
+	if(a == b)
+		Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+	else
+		Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
 
 	a = 0;
 	a1 = 0;
@@ -941,45 +949,42 @@ void PrepareBorder()
 	else
 		Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (a1 - a);
 
-	int lastb = 0;
+	a = 0;
 	for(i = Top + SCREEN_H / 2;i < Bottom + SCREEN_H / 2;i++)
 	{
 		char b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
 		if(b != 0)
 		{
-			if(a != 0)
+			if(a == 0)
+				a = b;
+			if(a <= b)
 			{
-				if(a <= b)
-				{
-					lastb = -1;
-					for(int j = back;j < i;j++)
-						Screen[j * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
-				}
-//				else
-//				if(a == b)
-//				{
-//					b = a - lastb;
-//					for(int j = back;j < i;j++)
-//						Screen[j * SCREEN_W + SCREEN_W / 2 + Right + 1] = b;
-//					lastb = 0;
-//				}
-				else
-				{
-					lastb = 1;
-					for(int j = back;j < i;j++)
-						Screen[j * SCREEN_W + SCREEN_W / 2 + Right + 1] = b;
-				}
-/**/
+				for(int j = back;j < i;j++)
+					Screen[j * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+			}
+			else
+			{
+				for(int j = back;j < i;j++)
+					Screen[j * SCREEN_W + SCREEN_W / 2 + Right + 1] = b;
 			}
 			a = b;
 			back = i;
 		}
 	}
-/*	for(i = back;i < Bottom + SCREEN_H / 2;i++)
+	for(i = back;i < Bottom + SCREEN_H / 2;i++)
 	{
 		Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
 	}
-*/
+
+	for(i = Top + SCREEN_H / 2;i < Bottom + SCREEN_H / 2;i++)
+	{
+		char b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
+		if(b != 0)
+			a = b;
+		if(Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1] == 0)
+			Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1] = 1;
+	}
+/**/
 	return;
 }
 //////////////////////////////////////////////////////
@@ -1063,7 +1068,7 @@ int CalculateRightEdges(int MostTop)
 							e1.a = e1.b;
 							e1.b = z;
 						}
-						if(Vectors2D[e1.b].y > Vectors2D[e1.a].y)
+						if(Vectors2D[e1.b].y >= Vectors2D[e1.a].y)
 						{
 							e0 = e1;
 							RightSideEdgeBits |= 1 << k;
