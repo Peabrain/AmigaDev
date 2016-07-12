@@ -115,8 +115,8 @@ int ColorTable[16] =
 //int WinkelX = (-128) & (SINCOS - 1),WinkelY = (0) & (SINCOS - 1),WinkelZ = (0) & (SINCOS - 1);
 //int WinkelX = (-128) & (SINCOS - 1),WinkelY = (-32) & (SINCOS - 1),WinkelZ = (-64) & (SINCOS - 1);
 //int WinkelX = (-128) & (SINCOS - 1),WinkelY = (-64) & (SINCOS - 1),WinkelZ = (0) & (SINCOS - 1);
-int WinkelX = (-200) & (SINCOS - 1),WinkelY = (200) & (SINCOS - 1),WinkelZ = (200) & (SINCOS - 1);
-#define SHADEFACTOR 9
+int WinkelX = (-210) & (SINCOS - 1),WinkelY = (200) & (SINCOS - 1),WinkelZ = (200) & (SINCOS - 1);
+#define SHADEFACTOR 16
 //////////////////////////////////////////////////////
 #define SCREEN_W 256
 #define SCREEN_H 256
@@ -473,7 +473,7 @@ void	Init()
 	for(int i = 0;i < 12;i++) EdgeVisible[i] = 0;
 	for(int i = 0;i < 256*2;i++)
 	{
-		ACos[i] = (int)(sin((double)(i - 256) / 256.0) * 300.0 + 190);
+		ACos[i] = (int)(sin((double)(i - 256) / 256.0) * 180.0 + 96);
 	}
 }
 //////////////////////////////////////////////////////
@@ -674,7 +674,7 @@ void	DrawLine(char * Screen,int x0,int y0,int x1,int y1,char m)
 	{
 		int xadd = (x1 - x0) * 256 / (y1 - y0);
 		int x = ((x0 + SCREEN_W / 2) << 8) + 127;
-		for(int i = y0 + SCREEN_H / 2;i < y1 + SCREEN_H / 2;i++,x += xadd)
+		for(int i = y0 + SCREEN_H / 2;i <= y1 + SCREEN_H / 2;i++,x += xadd)
 		{
 			Screen[i * SCREEN_W + (x >> 8)] = m;
 		}
@@ -701,8 +701,8 @@ void	DrawLineEor(char * Screen,int x0,int y0,int x1,int y1,char m)
 	}
 	else
 	{
-		int xadd = (x1 - x0) * 256 / (y1 - y0);
-		int x = ((x0 + SCREEN_W / 2) << 8) + 127;
+		int xadd = ((x1 - x0) << 8) / (y1 - y0);
+		int x = ((x0 + SCREEN_W / 2) << 8);
 		for(int i = y0 + SCREEN_H / 2;i < y1 + SCREEN_H / 2;i++,x += xadd)
 		{
 			Screen[i * SCREEN_W + (x >> 8)] ^= m;
@@ -783,6 +783,10 @@ void CalculateEdgeSplit()
 
 				VEC2 va = Vectors2D[a];
 				VEC2 vb = Vectors2D[b];
+				va.x = (va.x << 8) + 127;
+				va.y = (va.y << 8);
+				vb.x = (vb.x << 8) + 127;
+				vb.y = (vb.y << 8);
 
 				int aNorm = -Normals[a].z;
 				int bNorm = -Normals[b].z;
@@ -817,8 +821,8 @@ void CalculateEdgeSplit()
 					{
 						int nNorm = n;
 						VEC2COL nVec;
-						nVec.v.x = (vDiff.x * nNorm / NormDiff + va.x);
-						nVec.v.y = (vDiff.y * nNorm / NormDiff + va.y);
+						nVec.v.x = (vDiff.x * nNorm / NormDiff + va.x) >> 8;
+						nVec.v.y = (vDiff.y * nNorm / NormDiff + va.y) >> 8;
 						nVec.c = ((n + aNorm) >> 8);
 //						Screen[(nVec.v.y + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + nVec.v.x] = nVec.c;//coloradd;// + cp;
 						Vec2Col[Vec2ColCount++] = nVec;
@@ -831,12 +835,12 @@ void CalculateEdgeSplit()
 					VEC2COL nVec;
 					if(NormDiff == 0)
 					{
-						nVec.v.x = va.x;
-						nVec.v.y = va.y;
+						nVec.v.x = va.x >> 8;
+						nVec.v.y = va.y >> 8;
 						nVec.c = ((n + aNorm) >> 8);
 //						Vec2Col[Vec2ColCount++] = nVec;
-						nVec.v.x = vb.x;
-						nVec.v.y = vb.y;
+						nVec.v.x = vb.x >> 8;
+						nVec.v.y = vb.y >> 8;
 						nVec.c = ((n + aNorm) >> 8);
 //						Vec2Col[Vec2ColCount++] = nVec;
 					}
@@ -865,7 +869,7 @@ void FinalMasking()
 		}
 	}
 
-	for(int y = Top + SCREEN_H / 2;y < Bottom + SCREEN_H / 2;y++)
+	for(int y = Top + SCREEN_H / 2;y < Bottom + SCREEN_H / 2 + 1;y++)
 	{
 		char a = 0;
 		for(int x = Right + SCREEN_W / 2 + 1;x >= Left + SCREEN_W / 2;x--)
@@ -968,7 +972,7 @@ void FillScreen()
 	for(int y = Top + SCREEN_H / 2;y < Bottom + SCREEN_H / 2 + 1;y++)
 	{
 		char a = 0;
-		for(int x = Right + SCREEN_W / 2 + 3;x >= Left + SCREEN_W / 2;x--)
+		for(int x = Right + SCREEN_W / 2 + 1;x >= Left + SCREEN_W / 2;x--)
 		{
 			char b = Screen[y * SCREEN_W + x];
 			if(b != 0) a = b;
