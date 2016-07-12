@@ -473,7 +473,7 @@ void	Init()
 	for(int i = 0;i < 12;i++) EdgeVisible[i] = 0;
 	for(int i = 0;i < 256*2;i++)
 	{
-		ACos[i] = (int)(sin((double)(i - 256) / 256.0) * 255.0 + 190);
+		ACos[i] = (int)(sin((double)(i - 256) / 256.0) * 300.0 + 190);
 	}
 }
 //////////////////////////////////////////////////////
@@ -632,7 +632,7 @@ void	PrintScreen()
 		{	
 			if(Screen[y * SCREEN_W + x])
 			{
-				int c = (Screen[y * SCREEN_W + x] * 15) << (23);
+				int c = (Screen[y * SCREEN_W + x] * 16) << (23);
 				glColor3i(c,c,c);
 			    glVertex2i(x, y);
 			}
@@ -898,13 +898,13 @@ void PrepareBorder()
 		{
 			if(a != 0)
 			{
-				if(a < b)
+//				if(a < b)
 					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
-				else
-				if(a == b)
-					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
-				else
-					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
+//				else
+//				if(a == b)
+//					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+//				else
+//					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
 				break;
 			}
 			a = b;
@@ -924,13 +924,13 @@ void PrepareBorder()
 	}
 	if(a1 == 0)
 		a1 = a;
-	if(a < a1)
+//	if(a < a1)
 		Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (a1 - a);
-	else
-	if(a == a1)
-		Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
-	else
-		Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (a1 - a);
+//	else
+//	if(a == a1)
+//		Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+//	else
+//		Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (a1 - a);
 
 	for(i = Top + SCREEN_H / 2;i < Bottom + SCREEN_H / 2;i++)
 	{
