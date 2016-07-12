@@ -48,16 +48,17 @@ VEC3	VectorsOrg[8] =
 	{ 256,-256, 256},	// 6
 	{-256,-256, 256},	// 7
 };
+#define NORM_SCALE 140
 VEC3	NormalsOrg[8] = 
 {
-	{-148,-148,-148},	// 0
-	{ 148,-148,-148},	// 1
-	{ 148, 148,-148},	// 2
-	{-148, 148,-148},	// 3
-	{-148, 148, 148},	// 4
-	{ 148, 148, 148},	// 5
-	{ 148,-148, 148},	// 6
-	{-148,-148, 148},	// 7
+	{-NORM_SCALE,-NORM_SCALE,-NORM_SCALE},	// 0
+	{ NORM_SCALE,-NORM_SCALE,-NORM_SCALE},	// 1
+	{ NORM_SCALE, NORM_SCALE,-NORM_SCALE},	// 2
+	{-NORM_SCALE, NORM_SCALE,-NORM_SCALE},	// 3
+	{-NORM_SCALE, NORM_SCALE, NORM_SCALE},	// 4
+	{ NORM_SCALE, NORM_SCALE, NORM_SCALE},	// 5
+	{ NORM_SCALE,-NORM_SCALE, NORM_SCALE},	// 6
+	{-NORM_SCALE,-NORM_SCALE, NORM_SCALE},	// 7
 };
 EDGE Edges[] =
 {
@@ -118,8 +119,8 @@ int ColorTable[16] =
 int WinkelX = (-210) & (SINCOS - 1),WinkelY = (200) & (SINCOS - 1),WinkelZ = (200) & (SINCOS - 1);
 #define SHADEFACTOR 16
 //////////////////////////////////////////////////////
-#define SCREEN_W 256
-#define SCREEN_H 256
+#define SCREEN_W 512
+#define SCREEN_H 512
 int	Sin[SINCOS];
 int	Cos[SINCOS];
 int ACos[256*2];
@@ -832,18 +833,22 @@ void CalculateEdgeSplit()
 				else
 				{
 					int nNorm = n;
-					VEC2COL nVec;
 					if(NormDiff == 0)
 					{
+						VEC2COL nVec;
 						nVec.v.x = va.x >> 8;
 						nVec.v.y = va.y >> 8;
 						nVec.c = ((n + aNorm) >> 8);
-//						Vec2Col[Vec2ColCount++] = nVec;
+						Vec2Col[Vec2ColCount++] = nVec;
+					}
+/*					if(NormDiff == 0)
+					{
 						nVec.v.x = vb.x >> 8;
 						nVec.v.y = vb.y >> 8;
 						nVec.c = ((n + aNorm) >> 8);
-//						Vec2Col[Vec2ColCount++] = nVec;
+						Vec2Col[Vec2ColCount++] = nVec;
 					}
+*/
 				}
 				EdgesCalcedLast[i] = Vec2ColCount; 
 			}
@@ -902,13 +907,13 @@ void PrepareBorder()
 		{
 			if(a != 0)
 			{
-//				if(a < b)
+				if(a < b)
 					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
-//				else
-//				if(a == b)
-//					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
-//				else
-//					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
+				else
+				if(a == b)
+					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+				else
+					Screen[(Top + SCREEN_H / 2) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (b - a);
 				break;
 			}
 			a = b;
@@ -928,14 +933,15 @@ void PrepareBorder()
 	}
 	if(a1 == 0)
 		a1 = a;
-//	if(a < a1)
+	if(a < a1)
 		Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (a1 - a);
-//	else
-//	if(a == a1)
-//		Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
-//	else
-//		Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (a1 - a);
+	else
+	if(a == a1)
+		Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
+	else
+		Screen[(Bottom + SCREEN_H / 2 - 1) * SCREEN_W + SCREEN_W / 2 + Right + 1] = a - (a1 - a);
 
+	int lastb = 0;
 	for(i = Top + SCREEN_H / 2;i < Bottom + SCREEN_H / 2;i++)
 	{
 		char b = Screen[i * SCREEN_W + SCREEN_W / 2 + Right + 1];
@@ -945,12 +951,22 @@ void PrepareBorder()
 			{
 				if(a <= b)
 				{
+					lastb = -1;
 					for(int j = back;j < i;j++)
 						Screen[j * SCREEN_W + SCREEN_W / 2 + Right + 1] = a;
 				}
+//				else
+//				if(a == b)
+//				{
+//					b = a - lastb;
+//					for(int j = back;j < i;j++)
+//						Screen[j * SCREEN_W + SCREEN_W / 2 + Right + 1] = b;
+//					lastb = 0;
+//				}
 				else
 				{
-					for(int j = i - 1;j >= back;j--)
+					lastb = 1;
+					for(int j = back;j < i;j++)
 						Screen[j * SCREEN_W + SCREEN_W / 2 + Right + 1] = b;
 				}
 /**/
